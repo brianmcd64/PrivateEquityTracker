@@ -46,8 +46,11 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
     { id: 4, name: "Tom Wilson", role: "functional_lead", specialization: "operations" },
   ];
 
+  // Helper to define correct types for the Insert mutation
+  type TaskApiResponse = any; // Replace with actual API response type if known
+  
   // Handle form submission
-  const mutation = useMutation({
+  const mutation = useMutation<TaskApiResponse, Error, InsertTask>({
     mutationFn: async (data: InsertTask) => {
       return apiRequest("POST", "/api/tasks", data);
     },

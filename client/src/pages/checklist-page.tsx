@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/layout";
 import { TaskList } from "@/components/tasks/task-list";
+import { CreateTaskForm } from "@/components/tasks/create-task-form";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Settings2, ListFilter } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -72,16 +73,19 @@ export default function ChecklistPage() {
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [customStatuses, setCustomStatuses] = useState<string[]>([]);
   
+  // Task creation state
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+  
   // New custom field
   const [newCustomFieldType, setNewCustomFieldType] = useState<"phase" | "category" | "status">("phase");
   const [newCustomFieldValue, setNewCustomFieldValue] = useState("");
   
   const handleAddTask = () => {
-    // In a production app, this would open a form to create a new task
-    toast({
-      title: "Feature not implemented",
-      description: "Task creation form would appear here in the full application.",
-    });
+    setIsCreateTaskOpen(true);
+  };
+  
+  const handleCloseCreateTask = () => {
+    setIsCreateTaskOpen(false);
   };
   
   const handleAddCustomField = () => {
@@ -383,6 +387,15 @@ export default function ChecklistPage() {
         customCategories={customCategories}
         customStatuses={customStatuses}
       />
+      
+      {/* Create Task Dialog */}
+      {dealId && (
+        <CreateTaskForm 
+          isOpen={isCreateTaskOpen} 
+          onClose={handleCloseCreateTask}
+          dealId={dealId}
+        />
+      )}
     </Layout>
   );
 }
