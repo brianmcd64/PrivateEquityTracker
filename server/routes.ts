@@ -1,0 +1,670 @@
+import type { Express, Request, Response, NextFunction } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { setupAuth, seedAdmin } from "./auth";
+import { 
+  insertDealSchema, 
+  insertTaskSchema, 
+  insertDocumentSchema, 
+  insertRequestSchema,
+  insertRaciMatrixSchema,
+  insertActivityLogSchema,
+  UserRoles,
+  TaskPhases,
+  TaskCategories,
+  TaskStatuses,
+  RequestTypes,
+  RequestStatuses
+} from "@shared/schema";
+import { z } from "zod";
+
+// Middleware to check if user is authenticated
+const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ message: "Unauthorized" });
+};
+
+// Middleware to check if user has deal_lead role
+const isDealLead = (req: Request, res: Response, next: NextFunction) => {
+  if (req.user?.role === UserRoles.DEAL_LEAD) {
+    return next();
+  }
+  res.status(403).json({ message: "Forbidden - Requires Deal Lead role" });
+};
+
+// Middleware to check if user has appropriate role to modify task
+const canModifyTask = async (req: Request, res: Response, next: NextFunction) => {
+  if (req.user?.role === UserRoles.DEAL_LEAD) {
+    // Deal leads can modify any task
+    return next();
+  }
+  
+  if (req.user?.role === UserRoles.FUNCTIONAL_LEAD) {
+    const taskId = parseInt(req.params.id);
+    const task = await storage.getTask(taskId);
+    
+    // Functional leads can only modify tasks in their specialty
+    if (task && task.category === req.user.specialization) {
+      return next();
+    }
+  }
+  
+  // Partners cannot modify tasks
+  res.status(403).json({ message: "Forbidden - Insufficient permissions to modify this task" });
+};
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication
+  await setupAuth(app);
+  
+  // Seed admin user
+  await seedAdmin();
+  
+  // Seed initial data
+  await seedInitialData();
+
+  // ============================
+  // Deal Routes
+  // ============================
+  
+  // Get all deals
+  app.get("/api/deals", isAuthenticated, async (req, res) => {
+    const deals = await storage.getDeals();
+    res.json(deals);
+  });
+  
+  // Get a specific deal
+  app.get("/api/deals/:id", isAuthenticated, async (req, res) => {
+    const dealId = parseInt(req.params.id);
+    const deal = await storage.getDeal(dealId);
+    
+    if (!deal) {
+      return res.status(404).json({ message: "Deal not found" });
+    }
+    
+    res.json(deal);
+  });
+  
+  // Create a new deal (deal lead only)
+  app.post("/api/deals", isAuthenticated, isDealLead, async (req, res) => {
+    try {
+      const dealData = insertDealSchema.parse(req.body);
+      const deal = await storage.createDeal(dealData);
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: deal.id,
+        userId: req.user!.id,
+        action: "created",
+        entityType: "deal",
+        entityId: deal.id,
+        details: `Created deal: ${deal.name}`
+      });
+      
+      res.status(201).json(deal);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid deal data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // Update a deal (deal lead only)
+  app.patch("/api/deals/:id", isAuthenticated, isDealLead, async (req, res) => {
+    try {
+      const dealId = parseInt(req.params.id);
+      const dealData = insertDealSchema.partial().parse(req.body);
+      
+      const updatedDeal = await storage.updateDeal(dealId, dealData);
+      
+      if (!updatedDeal) {
+        return res.status(404).json({ message: "Deal not found" });
+      }
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: updatedDeal.id,
+        userId: req.user!.id,
+        action: "updated",
+        entityType: "deal",
+        entityId: updatedDeal.id,
+        details: `Updated deal: ${updatedDeal.name}`
+      });
+      
+      res.json(updatedDeal);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid deal data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // ============================
+  // Task Routes
+  // ============================
+  
+  // Get all tasks for a deal
+  app.get("/api/deals/:dealId/tasks", isAuthenticated, async (req, res) => {
+    const dealId = parseInt(req.params.dealId);
+    const tasks = await storage.getTasksByDeal(dealId);
+    res.json(tasks);
+  });
+  
+  // Get tasks by phase for a deal
+  app.get("/api/deals/:dealId/phases/:phase/tasks", isAuthenticated, async (req, res) => {
+    const dealId = parseInt(req.params.dealId);
+    const phase = req.params.phase;
+    
+    // Validate phase
+    const validPhases = Object.values(TaskPhases);
+    if (!validPhases.includes(phase as any)) {
+      return res.status(400).json({ message: `Invalid phase. Must be one of: ${validPhases.join(', ')}` });
+    }
+    
+    const tasks = await storage.getTasksByPhase(dealId, phase);
+    res.json(tasks);
+  });
+  
+  // Get a specific task
+  app.get("/api/tasks/:id", isAuthenticated, async (req, res) => {
+    const taskId = parseInt(req.params.id);
+    const task = await storage.getTask(taskId);
+    
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+    
+    res.json(task);
+  });
+  
+  // Create a new task
+  app.post("/api/tasks", isAuthenticated, async (req, res) => {
+    try {
+      const taskData = insertTaskSchema.parse(req.body);
+      const task = await storage.createTask(taskData);
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: task.dealId,
+        userId: req.user!.id,
+        action: "created",
+        entityType: "task",
+        entityId: task.id,
+        details: `Created task: ${task.title}`
+      });
+      
+      res.status(201).json(task);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid task data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // Update a task (with role-based permission check)
+  app.patch("/api/tasks/:id", isAuthenticated, canModifyTask, async (req, res) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      const taskData = insertTaskSchema.partial().parse(req.body);
+      
+      const currentTask = await storage.getTask(taskId);
+      if (!currentTask) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      const updatedTask = await storage.updateTask(taskId, taskData);
+      
+      // Check if status was updated to completed
+      if (taskData.status === TaskStatuses.COMPLETED && currentTask.status !== TaskStatuses.COMPLETED) {
+        // Log completion activity
+        await storage.createActivityLog({
+          dealId: updatedTask!.dealId,
+          userId: req.user!.id,
+          action: "completed",
+          entityType: "task",
+          entityId: updatedTask!.id,
+          details: `Completed task: ${updatedTask!.title}`
+        });
+      } else {
+        // Log general update activity
+        await storage.createActivityLog({
+          dealId: updatedTask!.dealId,
+          userId: req.user!.id,
+          action: "updated",
+          entityType: "task",
+          entityId: updatedTask!.id,
+          details: `Updated task: ${updatedTask!.title}`
+        });
+      }
+      
+      res.json(updatedTask);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid task data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // ============================
+  // Document Routes
+  // ============================
+  
+  // Get documents for a task
+  app.get("/api/tasks/:taskId/documents", isAuthenticated, async (req, res) => {
+    const taskId = parseInt(req.params.taskId);
+    const documents = await storage.getDocumentsByTask(taskId);
+    res.json(documents);
+  });
+  
+  // Get recent documents for a deal
+  app.get("/api/deals/:dealId/recent-documents", isAuthenticated, async (req, res) => {
+    const dealId = parseInt(req.params.dealId);
+    const limit = parseInt(req.query.limit as string || "4");
+    const documents = await storage.getRecentDocuments(dealId, limit);
+    res.json(documents);
+  });
+  
+  // Upload a document
+  app.post("/api/documents", isAuthenticated, async (req, res) => {
+    try {
+      // For this prototype, we'll store document content as text in memory
+      const documentData = insertDocumentSchema.parse({
+        ...req.body,
+        uploadedBy: req.user!.id
+      });
+      
+      const document = await storage.createDocument(documentData);
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: req.body.dealId, // Need to pass dealId in request body since document only has taskId
+        userId: req.user!.id,
+        action: "uploaded",
+        entityType: "document",
+        entityId: document.id,
+        details: `Uploaded document: ${document.fileName}`
+      });
+      
+      res.status(201).json(document);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid document data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // ============================
+  // Request Routes
+  // ============================
+  
+  // Get requests for a task
+  app.get("/api/tasks/:taskId/requests", isAuthenticated, async (req, res) => {
+    const taskId = parseInt(req.params.taskId);
+    const requests = await storage.getRequestsByTask(taskId);
+    res.json(requests);
+  });
+  
+  // Get all requests for a deal
+  app.get("/api/deals/:dealId/requests", isAuthenticated, async (req, res) => {
+    const dealId = parseInt(req.params.dealId);
+    const requests = await storage.getRequestsByDeal(dealId);
+    res.json(requests);
+  });
+  
+  // Create a new request
+  app.post("/api/requests", isAuthenticated, async (req, res) => {
+    try {
+      const requestData = insertRequestSchema.parse({
+        ...req.body,
+        createdBy: req.user!.id
+      });
+      
+      const request = await storage.createRequest(requestData);
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: req.body.dealId, // Need to pass dealId in request body since request only has taskId
+        userId: req.user!.id,
+        action: "created",
+        entityType: "request",
+        entityId: request.id,
+        details: `Created request: ${request.requestId}`
+      });
+      
+      res.status(201).json(request);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // Update a request
+  app.patch("/api/requests/:id", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const requestData = insertRequestSchema.partial().parse(req.body);
+      
+      const updatedRequest = await storage.updateRequest(requestId, requestData);
+      
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: req.body.dealId, // Need to pass dealId in request body
+        userId: req.user!.id,
+        action: "updated",
+        entityType: "request",
+        entityId: updatedRequest.id,
+        details: `Updated request: ${updatedRequest.requestId}`
+      });
+      
+      res.json(updatedRequest);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // ============================
+  // RACI Matrix Routes
+  // ============================
+  
+  // Get RACI matrix for a task
+  app.get("/api/tasks/:taskId/raci", isAuthenticated, async (req, res) => {
+    const taskId = parseInt(req.params.taskId);
+    const raci = await storage.getRaciMatrix(taskId);
+    
+    if (!raci) {
+      return res.status(404).json({ message: "RACI matrix not found for this task" });
+    }
+    
+    res.json(raci);
+  });
+  
+  // Create or update RACI matrix
+  app.post("/api/raci", isAuthenticated, isDealLead, async (req, res) => {
+    try {
+      const raciData = insertRaciMatrixSchema.parse(req.body);
+      
+      // Check if RACI already exists for this task
+      const existingRaci = await storage.getRaciMatrix(raciData.taskId);
+      
+      let raci;
+      if (existingRaci) {
+        // Update existing
+        raci = await storage.updateRaciMatrix(existingRaci.id, raciData);
+      } else {
+        // Create new
+        raci = await storage.createRaciMatrix(raciData);
+      }
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: raci!.dealId,
+        userId: req.user!.id,
+        action: existingRaci ? "updated" : "created",
+        entityType: "raci",
+        entityId: raci!.id,
+        details: `${existingRaci ? "Updated" : "Created"} RACI matrix for task ${raci!.taskId}`
+      });
+      
+      res.status(existingRaci ? 200 : 201).json(raci);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid RACI data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // ============================
+  // Activity Log Routes
+  // ============================
+  
+  // Get activity logs for a deal
+  app.get("/api/deals/:dealId/activity", isAuthenticated, async (req, res) => {
+    const dealId = parseInt(req.params.dealId);
+    const limit = parseInt(req.query.limit as string || "20");
+    const logs = await storage.getActivityLogsByDeal(dealId, limit);
+    res.json(logs);
+  });
+
+  const httpServer = createServer(app);
+
+  return httpServer;
+}
+
+// Helper function to seed initial data
+async function seedInitialData() {
+  // Check if we already have deals
+  const existingDeals = await storage.getDeals();
+  if (existingDeals.length > 0) {
+    // Data already seeded
+    return;
+  }
+  
+  // Create a test deal
+  const deal = await storage.createDeal({
+    name: "TechFusion Acquisition",
+    status: "active"
+  });
+  
+  // Create tasks for LOI phase (all completed)
+  const loiTasks = [
+    {
+      dealId: deal.id,
+      title: "Initial Financial Review",
+      description: "Review P&L, balance sheet, and cash flow statements for past 3 years",
+      phase: TaskPhases.LOI,
+      category: TaskCategories.FINANCIAL,
+      status: TaskStatuses.COMPLETED,
+      dueDate: new Date("2023-05-15"),
+      assignedTo: 2, // Michael Reynolds (financial lead)
+    },
+    {
+      dealId: deal.id,
+      title: "Legal Structure Analysis",
+      description: "Review corporate organization, subsidiaries, and ownership structure",
+      phase: TaskPhases.LOI,
+      category: TaskCategories.LEGAL,
+      status: TaskStatuses.COMPLETED,
+      dueDate: new Date("2023-05-18"),
+      assignedTo: 3, // Amanda Lee (legal lead)
+    },
+    {
+      dealId: deal.id,
+      title: "Market Analysis",
+      description: "Evaluate target company's market position, competitors, and growth potential",
+      phase: TaskPhases.LOI,
+      category: TaskCategories.OPERATIONS,
+      status: TaskStatuses.COMPLETED,
+      dueDate: new Date("2023-05-20"),
+      assignedTo: 1, // Sarah Johnson (deal lead)
+    }
+  ];
+  
+  for (const taskData of loiTasks) {
+    const task = await storage.createTask(taskData);
+    await storage.updateTask(task.id, { completedAt: taskData.dueDate });
+  }
+  
+  // Create tasks for Document Review phase (mix of completed and in progress)
+  const documentTasks = [
+    {
+      dealId: deal.id,
+      title: "Customer Concentration Analysis",
+      description: "Analyze customer base and identify dependency on key accounts",
+      phase: TaskPhases.DOCUMENT,
+      category: TaskCategories.FINANCIAL,
+      status: TaskStatuses.COMPLETED,
+      dueDate: new Date("2023-06-02"),
+      assignedTo: 4, // Tom Wilson (operations)
+    },
+    {
+      dealId: deal.id,
+      title: "IP Rights Review",
+      description: "Verify patents, trademarks, and other intellectual property assets",
+      phase: TaskPhases.DOCUMENT,
+      category: TaskCategories.LEGAL,
+      status: TaskStatuses.COMPLETED,
+      dueDate: new Date("2023-06-05"),
+      assignedTo: 3, // Amanda Lee (legal lead)
+    },
+    {
+      dealId: deal.id,
+      title: "Financial Statement Analysis",
+      description: "Detailed analysis of financial statements, accounting policies, and adjustments",
+      phase: TaskPhases.DOCUMENT,
+      category: TaskCategories.FINANCIAL,
+      status: TaskStatuses.IN_PROGRESS,
+      dueDate: new Date("2023-06-05"), // Overdue
+      assignedTo: 2, // Michael Reynolds (financial)
+    },
+    {
+      dealId: deal.id,
+      title: "Inventory Valuation",
+      description: "Review inventory records, valuation methods, and obsolescence policies",
+      phase: TaskPhases.DOCUMENT,
+      category: TaskCategories.OPERATIONS,
+      status: TaskStatuses.IN_PROGRESS,
+      dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
+      assignedTo: 4, // Tom Wilson (operations)
+    },
+    {
+      dealId: deal.id,
+      title: "Regulatory Compliance Review",
+      description: "Evaluate compliance with industry regulations and identify potential issues",
+      phase: TaskPhases.DOCUMENT,
+      category: TaskCategories.LEGAL,
+      status: TaskStatuses.IN_PROGRESS,
+      dueDate: new Date("2023-06-01"), // Overdue
+      assignedTo: 3, // Amanda Lee (legal)
+    }
+  ];
+  
+  for (const taskData of documentTasks) {
+    const task = await storage.createTask(taskData);
+    
+    if (taskData.status === TaskStatuses.COMPLETED) {
+      await storage.updateTask(task.id, { completedAt: taskData.dueDate });
+    }
+  }
+  
+  // Create some sample documents
+  const documents = [
+    {
+      taskId: 1, // Initial Financial Review
+      fileName: "Q1_Financial_Statements.pdf",
+      fileSize: 1200000, // 1.2 MB
+      fileType: "application/pdf",
+      content: "Q1 Financial Statements content would be here",
+      uploadedBy: 2, // Michael Reynolds
+    },
+    {
+      taskId: 2, // Legal Structure Analysis
+      fileName: "Corporate_Structure_Overview.docx",
+      fileSize: 850000, // 850 KB
+      fileType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      content: "Corporate Structure Overview content would be here",
+      uploadedBy: 3, // Amanda Lee
+    },
+    {
+      taskId: 4, // Customer Concentration Analysis
+      fileName: "Customer_Concentration_Analysis.docx",
+      fileSize: 850000, // 850 KB
+      fileType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      content: "Customer Concentration Analysis content would be here",
+      uploadedBy: 4, // Tom Wilson
+    },
+    {
+      taskId: 5, // IP Rights Review
+      fileName: "IP_Rights_Summary.xlsx",
+      fileSize: 1400000, // 1.4 MB
+      fileType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      content: "IP Rights Summary content would be here",
+      uploadedBy: 3, // Amanda Lee
+    },
+    {
+      taskId: 8, // Regulatory Compliance Review
+      fileName: "Regulatory_Compliance_Report.pdf",
+      fileSize: 3500000, // 3.5 MB
+      fileType: "application/pdf",
+      content: "Regulatory Compliance Report content would be here",
+      uploadedBy: 3, // Amanda Lee
+    }
+  ];
+  
+  for (const docData of documents) {
+    await storage.createDocument(docData);
+  }
+  
+  // Create sample activity logs
+  const activities = [
+    {
+      dealId: deal.id,
+      userId: 1, // Sarah Johnson
+      action: "created",
+      entityType: "deal",
+      entityId: deal.id,
+      details: "Created deal: TechFusion Acquisition",
+    },
+    {
+      dealId: deal.id,
+      userId: 2, // Michael Reynolds
+      action: "uploaded",
+      entityType: "document",
+      entityId: 1,
+      details: "Uploaded Q1 Financial Statements",
+    },
+    {
+      dealId: deal.id,
+      userId: 3, // Amanda Lee
+      action: "completed",
+      entityType: "task",
+      entityId: 5,
+      details: "Completed IP Rights Review",
+    },
+    {
+      dealId: deal.id,
+      userId: 4, // Tom Wilson
+      action: "created",
+      entityType: "request",
+      entityId: 1,
+      details: "Requested additional customer data",
+    },
+    {
+      dealId: deal.id,
+      userId: 1, // Sarah Johnson
+      action: "created",
+      entityType: "task",
+      entityId: 9,
+      details: "Scheduled management interviews",
+    }
+  ];
+  
+  // Add activity logs with staggered timestamps
+  let timeOffset = 0;
+  for (const activity of activities) {
+    const log = {
+      ...activity,
+      timestamp: new Date(Date.now() - timeOffset)
+    };
+    await storage.createActivityLog(activity);
+    timeOffset += 3 * 60 * 60 * 1000; // 3 hour intervals
+  }
+  
+  console.log("Initial data seeded successfully");
+}
