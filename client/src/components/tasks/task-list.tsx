@@ -11,7 +11,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface TaskListProps {
   dealId: number;
-  viewMode?: "phase" | "date" | "category";
+  viewMode?: "phase" | "date" | "category" | "owner";
   customPhases?: string[];
   customCategories?: string[];
   customStatuses?: string[];
@@ -48,6 +48,7 @@ export function TaskList({
   // Group tasks by view mode
   const [groupedByPhase, setGroupedByPhase] = useState<Record<string, Task[]>>({});
   const [groupedByCategory, setGroupedByCategory] = useState<Record<string, Task[]>>({});
+  const [groupedByOwner, setGroupedByOwner] = useState<Record<string, Task[]>>({});
   const [tasksByDate, setTasksByDate] = useState<Task[]>([]);
   
   useEffect(() => {
@@ -128,6 +129,37 @@ export function TaskList({
         
         setGroupedByCategory(grouped);
       } 
+      else if (viewMode === "owner") {
+        // Group by owner
+        const grouped: Record<string, Task[]> = {};
+        
+        // Initialize groups for each user
+        users.forEach(user => {
+          grouped[user.id.toString()] = [];
+        });
+        
+        // Add "Unassigned" group
+        grouped["unassigned"] = [];
+        
+        // Sort tasks by owner
+        for (const task of filteredTasks) {
+          const ownerId = task.assignedTo ? task.assignedTo.toString() : "unassigned";
+          
+          if (!grouped[ownerId]) {
+            grouped[ownerId] = [];
+          }
+          grouped[ownerId].push(task);
+        }
+        
+        // Remove empty owner groups
+        Object.keys(grouped).forEach(ownerId => {
+          if (grouped[ownerId].length === 0) {
+            delete grouped[ownerId];
+          }
+        });
+        
+        setGroupedByOwner(grouped);
+      } 
       else {
         // For date view, sort tasks by due date
         const sortedTasks = [...filteredTasks].sort((a, b) => {
@@ -145,7 +177,7 @@ export function TaskList({
         setTasksByDate(sortedTasks);
       }
     }
-  }, [tasks, phaseFilter, categoryFilter, statusFilter, ownerFilter, viewMode, customPhases, customCategories, sortOrder]);
+  }, [tasks, phaseFilter, categoryFilter, statusFilter, ownerFilter, viewMode, customPhases, customCategories, sortOrder, users]);
   
   const handleTaskComplete = async (task: Task) => {
     try {
