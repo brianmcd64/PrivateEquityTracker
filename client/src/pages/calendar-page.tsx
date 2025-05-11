@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Task, TaskStatuses } from "@shared/schema";
+import { Task, TaskStatuses, Deal } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { format, isToday, isSameMonth, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay } from "date-fns";
@@ -61,7 +61,8 @@ export default function CalendarPage() {
   
   // Get tasks for a specific day
   const getTasksForDay = (day: Date) => {
-    if (!tasks) return [];
+    // Return empty array if tasks or dealId is not available
+    if (!tasks || !dealId) return [];
     
     return tasks.filter(task => {
       if (!task.dueDate) return false;
@@ -98,10 +99,24 @@ export default function CalendarPage() {
     }
   };
 
+  // If no deal ID yet, show loading state
+  if (!dealId) {
+    return (
+      <Layout 
+        title="Loading Calendar..." 
+        subtitle="Please wait"
+      >
+        <div className="flex items-center justify-center h-64">
+          <p className="text-neutral-500">Loading deal information...</p>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout 
       title="Calendar View" 
-      subtitle="TechFusion Acquisition"
+      subtitle={dealName}
     >
       {/* Calendar Header */}
       <div className="mb-6 flex items-center justify-between">

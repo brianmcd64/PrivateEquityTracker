@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,12 +21,47 @@ import { OverdueTasksList } from "@/components/reports/overdue-tasks-list";
 
 export default function ReportsPage() {
   const { toast } = useToast();
-  const [dealId, setDealId] = useState(1); // For prototype, default to TechFusion
+  const [, navigate] = useLocation();
+  const [dealName, setDealName] = useState<string>("");
+  
+  // Get the active deal from localStorage and use for initial state
+  const [dealId, setDealId] = useState<number | null>(null);
+  
+  // Load active deal from localStorage
+  useEffect(() => {
+    const storedDealId = localStorage.getItem("activeDealId");
+    if (storedDealId) {
+      setDealId(parseInt(storedDealId));
+    } else {
+      // Redirect to deal management if no active deal
+      navigate("/deals");
+    }
+  }, [navigate]);
   
   // Fetch deal data
   const { data: deals } = useQuery<Deal[]>({
     queryKey: ["/api/deals"],
   });
+  
+  // Fetch active deal info
+  const { data: deal } = useQuery<Deal>({
+    queryKey: dealId ? [`/api/deals/${dealId}`] : ['skip-query'],
+    enabled: !!dealId,
+  });
+  
+  // Update deal name when deal data is loaded
+  useEffect(() => {
+    if (deal) {
+      setDealName(deal.name);
+    }
+  }, [deal]);
+  
+  // Update localStorage when manually changing deal in report view
+  useEffect(() => {
+    if (dealId) {
+      localStorage.setItem("activeDealId", dealId.toString());
+    }
+  }, [dealId]);
   
   // Fetch all tasks for the selected deal
   const { 
@@ -34,7 +70,8 @@ export default function ReportsPage() {
     error: tasksError,
     refetch: refetchTasks,
   } = useQuery<Task[]>({
-    queryKey: [`/api/deals/${dealId}/tasks`],
+    queryKey: dealId ? [`/api/deals/${dealId}/tasks`] : ['skip-tasks-query'],
+    enabled: !!dealId,
   });
   
   // Mock users for the prototype
@@ -61,20 +98,34 @@ export default function ReportsPage() {
     // In a real app, this would trigger an export of the report data
   };
   
+  // If no deal ID yet, show loading state
+  if (!dealId) {
+    return (
+      <Layout 
+        title="Loading Reports..." 
+        subtitle="Please wait"
+      >
+        <div className="flex items-center justify-center h-64">
+          <p className="text-neutral-500">Loading deal information...</p>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout 
       title="Reports & Analytics" 
-      subtitle="TechFusion Acquisition"
+      subtitle={dealName}
     >
       {/* Reports Controls */}
       <div className="mb-6 flex flex-col md:flex-row gap-4 justify-between">
         <div className="flex items-center gap-4">
-          {deals && deals.length > 0 && (
+          {deals && deals.length > 0 && dealId && (
             <Select value={dealId.toString()} onValueChange={(value) => setDealId(parseInt(value))}>
               <SelectTrigger className="w-[220px]">
                 <div className="flex items-center">
                   <Filter className="mr-2 h-4 w-4" />
-                  <span>Deal: {deals.find(d => d.id === dealId)?.name || "Loading..."}</span>
+                  <span>Deal: {dealName || "Loading..."}</span>
                 </div>
               </SelectTrigger>
               <SelectContent>
