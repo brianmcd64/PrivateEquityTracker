@@ -1,21 +1,48 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { MetricsCard } from "@/components/dashboard/metrics-card";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { RecentDocuments } from "@/components/dashboard/recent-documents";
 import { PhaseStatus } from "@/components/dashboard/phase-status";
 import { Button } from "@/components/ui/button";
-import { Task, TaskStatuses } from "@shared/schema";
+import { Task, TaskStatuses, Deal } from "@shared/schema";
 import { PlusCircle, Download } from "lucide-react";
 
 export default function DashboardPage() {
-  // For prototype, we'll use hardcoded dealId
-  const dealId = 1;
+  const [, navigate] = useLocation();
+  const [dealId, setDealId] = useState<number | null>(null);
+  const [dealName, setDealName] = useState<string>("");
+  
+  // Load active deal from localStorage
+  useEffect(() => {
+    const storedDealId = localStorage.getItem("activeDealId");
+    if (storedDealId) {
+      setDealId(parseInt(storedDealId));
+    } else {
+      // Redirect to deal management if no active deal
+      navigate("/deals");
+    }
+  }, [navigate]);
+  
+  // Fetch deal info
+  const { data: deal } = useQuery<Deal>({
+    queryKey: dealId ? [`/api/deals/${dealId}`] : ['skip-query'],
+    enabled: !!dealId,
+  });
+  
+  // Update deal name when deal data is loaded
+  useEffect(() => {
+    if (deal) {
+      setDealName(deal.name);
+    }
+  }, [deal]);
   
   // Fetch all tasks
   const { data: tasks, isLoading: isTasksLoading } = useQuery<Task[]>({
-    queryKey: [`/api/deals/${dealId}/tasks`],
+    queryKey: dealId ? [`/api/deals/${dealId}/tasks`] : ['skip-tasks-query'],
+    enabled: !!dealId,
   });
   
   // Calculate metrics
@@ -67,20 +94,46 @@ export default function DashboardPage() {
   
   const metrics = calculateMetrics();
   
+  // If no deal ID yet, show loading state
+  if (!dealId) {
+    return (
+      <Layout 
+        title="Loading Deal..." 
+        subtitle="Please wait"
+      >
+        <div className="flex items-center justify-center h-64">
+          <p className="text-neutral-500">Loading deal information...</p>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout 
-      title="TechFusion Acquisition" 
+      title={dealName || "Deal Dashboard"} 
       subtitle="Due Diligence Dashboard"
     >
-      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-end gap-4">
-        <Button variant="default" className="flex items-center">
-          <PlusCircle className="h-4 w-4 mr-2" />
-          New Task
-        </Button>
-        <Button variant="outline" className="flex items-center">
-          <Download className="h-4 w-4 mr-2" />
-          Export
-        </Button>
+      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <Button 
+            variant="outline" 
+            className="flex items-center"
+            onClick={() => navigate("/deals")}
+          >
+            Change Deal
+          </Button>
+        </div>
+        
+        <div className="flex flex-col md:flex-row gap-3">
+          <Button variant="default" className="flex items-center">
+            <PlusCircle className="h-4 w-4 mr-2" />
+            New Task
+          </Button>
+          <Button variant="outline" className="flex items-center">
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+        </div>
       </div>
       
       {/* Status Cards */}
