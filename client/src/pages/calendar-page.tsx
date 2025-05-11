@@ -14,12 +14,38 @@ export default function CalendarPage() {
   const [, navigate] = useLocation();
   const [currentDate, setCurrentDate] = useState(new Date());
   
-  // For prototype, we'll use hardcoded dealId
-  const dealId = 1;
+  // Get the active deal from localStorage
+  const [dealId, setDealId] = useState<number | null>(null);
+  const [dealName, setDealName] = useState<string>("");
+  
+  // Load active deal from localStorage
+  useEffect(() => {
+    const storedDealId = localStorage.getItem("activeDealId");
+    if (storedDealId) {
+      setDealId(parseInt(storedDealId));
+    } else {
+      // Redirect to deal management if no active deal
+      navigate("/deals");
+    }
+  }, [navigate]);
+  
+  // Fetch deal info
+  const { data: deal } = useQuery<Deal>({
+    queryKey: dealId ? [`/api/deals/${dealId}`] : ['skip-query'],
+    enabled: !!dealId,
+  });
+  
+  // Update deal name when deal data is loaded
+  useEffect(() => {
+    if (deal) {
+      setDealName(deal.name);
+    }
+  }, [deal]);
   
   // Fetch all tasks for the deal
   const { data: tasks, isLoading, error } = useQuery<Task[]>({
-    queryKey: [`/api/deals/${dealId}/tasks`],
+    queryKey: dealId ? [`/api/deals/${dealId}/tasks`] : ['skip-tasks-query'],
+    enabled: !!dealId,
   });
   
   // Generate calendar dates

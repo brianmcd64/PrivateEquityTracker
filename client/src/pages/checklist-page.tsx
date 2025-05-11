@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/layout";
 import { TaskList } from "@/components/tasks/task-list";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Settings2, ListFilter } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { Deal } from "@shared/schema";
 import { 
   Dialog, 
   DialogContent, 
@@ -29,9 +32,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function ChecklistPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const [dealId, setDealId] = useState<number | null>(null);
+  const [dealName, setDealName] = useState<string>("");
   
-  // For prototype, we'll use a hardcoded dealId
-  const dealId = 1;
+  // Load active deal from localStorage
+  useEffect(() => {
+    const storedDealId = localStorage.getItem("activeDealId");
+    if (storedDealId) {
+      setDealId(parseInt(storedDealId));
+    } else {
+      // Redirect to deal management if no active deal
+      navigate("/deals");
+    }
+  }, [navigate]);
+  
+  // Fetch deal info
+  const { data: deal } = useQuery<Deal>({
+    queryKey: dealId ? [`/api/deals/${dealId}`] : ['skip-query'],
+    enabled: !!dealId,
+  });
+  
+  // Update deal name when deal data is loaded
+  useEffect(() => {
+    if (deal) {
+      setDealName(deal.name);
+    }
+  }, [deal]);
   
   // View mode state
   const [viewMode, setViewMode] = useState<"phase" | "date" | "category" | "owner">("phase");
@@ -142,10 +169,24 @@ export default function ChecklistPage() {
   // Only deal leads and functional leads can add tasks or customize fields
   const canAddTask = user && (user.role === "deal_lead" || user.role === "functional_lead");
   
+  // If no deal ID yet, show loading state
+  if (!dealId) {
+    return (
+      <Layout 
+        title="Loading Checklist..." 
+        subtitle="Please wait"
+      >
+        <div className="flex items-center justify-center h-64">
+          <p className="text-neutral-500">Loading deal information...</p>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout 
       title="Due Diligence Checklist" 
-      subtitle="TechFusion Acquisition"
+      subtitle={dealName}
     >
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col sm:flex-row gap-3 mb-4 md:mb-0">
@@ -336,7 +377,7 @@ export default function ChecklistPage() {
       </div>
       
       <TaskList 
-        dealId={dealId} 
+        dealId={dealId!} 
         viewMode={viewMode} 
         customPhases={customPhases}
         customCategories={customCategories}

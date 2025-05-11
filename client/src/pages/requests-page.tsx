@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation, Link } from "wouter";
 import { Layout } from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,23 +21,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Request, RequestStatuses } from "@shared/schema";
+import { Request, RequestStatuses, Deal } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
 
 export default function RequestsPage() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dealId, setDealId] = useState<number | null>(null);
+  const [dealName, setDealName] = useState<string>("");
   
-  // For prototype, we'll use hardcoded dealId
-  const dealId = 1;
+  // Load active deal from localStorage
+  useEffect(() => {
+    const storedDealId = localStorage.getItem("activeDealId");
+    if (storedDealId) {
+      setDealId(parseInt(storedDealId));
+    } else {
+      // Redirect to deal management if no active deal
+      navigate("/deals");
+    }
+  }, [navigate]);
+  
+  // Fetch deal info
+  const { data: deal } = useQuery<Deal>({
+    queryKey: dealId ? [`/api/deals/${dealId}`] : ['skip-query'],
+    enabled: !!dealId,
+  });
+  
+  // Update deal name when deal data is loaded
+  useEffect(() => {
+    if (deal) {
+      setDealName(deal.name);
+    }
+  }, [deal]);
   
   // Fetch all requests for the deal
   const { data: requests, isLoading, error } = useQuery<Request[]>({
-    queryKey: [`/api/deals/${dealId}/requests`],
+    queryKey: dealId ? [`/api/deals/${dealId}/requests`] : ['skip-requests-query'],
+    enabled: !!dealId,
   });
   
   // Filter requests based on search term and status filter
@@ -96,10 +121,24 @@ export default function RequestsPage() {
     }
   };
 
+  // If no deal ID yet, show loading state
+  if (!dealId) {
+    return (
+      <Layout 
+        title="Loading Requests..." 
+        subtitle="Please wait"
+      >
+        <div className="flex items-center justify-center h-64">
+          <p className="text-neutral-500">Loading deal information...</p>
+        </div>
+      </Layout>
+    );
+  }
+  
   return (
     <Layout 
       title="Requests & Q&A" 
-      subtitle="TechFusion Acquisition"
+      subtitle={dealName}
     >
       {/* Filters and Search */}
       <div className="mb-6 flex flex-col md:flex-row gap-4 justify-between">
