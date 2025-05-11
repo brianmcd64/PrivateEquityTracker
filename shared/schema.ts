@@ -58,6 +58,7 @@ export const insertTaskSchema = createInsertSchema(tasks).pick({
   status: true,
   dueDate: true,
   assignedTo: true,
+  completedAt: true,
 });
 
 // Documents model

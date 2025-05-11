@@ -5,20 +5,32 @@ import { useAuth } from "@/hooks/use-auth";
 import { Task, TaskPhases, TaskCategories, TaskStatuses } from "@shared/schema";
 import { formatDistanceToNow, isPast, addDays } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface TaskListProps {
   dealId: number;
+  viewMode?: "phase" | "date";
+  customPhases?: string[];
+  customCategories?: string[];
+  customStatuses?: string[];
 }
 
-export function TaskList({ dealId }: TaskListProps) {
+export function TaskList({ 
+  dealId,
+  viewMode = "phase",
+  customPhases = [],
+  customCategories = [],
+  customStatuses = []
+}: TaskListProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [phaseFilter, setPhaseFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [ownerFilter, setOwnerFilter] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   
   // Fetch all tasks for the deal
   const { data: tasks, isLoading, error } = useQuery<Task[]>({
@@ -33,8 +45,9 @@ export function TaskList({ dealId }: TaskListProps) {
     { id: 4, name: "Tom Wilson" },
   ];
   
-  // Group tasks by phase
+  // Group tasks by view mode
   const [groupedTasks, setGroupedTasks] = useState<Record<string, Task[]>>({});
+  const [tasksByDate, setTasksByDate] = useState<Task[]>([]);
   
   useEffect(() => {
     if (tasks) {
@@ -48,18 +61,56 @@ export function TaskList({ dealId }: TaskListProps) {
         );
       });
       
-      // Group by phase
-      const grouped: Record<string, Task[]> = {};
-      for (const task of filteredTasks) {
-        if (!grouped[task.phase]) {
-          grouped[task.phase] = [];
+      if (viewMode === "phase") {
+        // Group by phase
+        const grouped: Record<string, Task[]> = {};
+        
+        // Start with standard phases
+        Object.values(TaskPhases).forEach(phase => {
+          grouped[phase] = [];
+        });
+        
+        // Add custom phases
+        customPhases.forEach(phase => {
+          if (!grouped[phase]) {
+            grouped[phase] = [];
+          }
+        });
+        
+        // Sort tasks into phases
+        for (const task of filteredTasks) {
+          if (!grouped[task.phase]) {
+            grouped[task.phase] = [];
+          }
+          grouped[task.phase].push(task);
         }
-        grouped[task.phase].push(task);
+        
+        // Remove empty phases
+        Object.keys(grouped).forEach(phase => {
+          if (grouped[phase].length === 0) {
+            delete grouped[phase];
+          }
+        });
+        
+        setGroupedTasks(grouped);
+      } else {
+        // For date view, sort tasks by due date
+        const sortedTasks = [...filteredTasks].sort((a, b) => {
+          // Handle tasks without due dates (place at the end)
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          
+          const dateA = new Date(a.dueDate).getTime();
+          const dateB = new Date(b.dueDate).getTime();
+          
+          return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+        });
+        
+        setTasksByDate(sortedTasks);
       }
-      
-      setGroupedTasks(grouped);
     }
-  }, [tasks, phaseFilter, categoryFilter, statusFilter, ownerFilter]);
+  }, [tasks, phaseFilter, categoryFilter, statusFilter, ownerFilter, viewMode, customPhases, sortOrder]);
   
   const handleTaskComplete = async (task: Task) => {
     try {
@@ -93,8 +144,15 @@ export function TaskList({ dealId }: TaskListProps) {
         return "bg-success";
       case TaskPhases.FINAL:
         return "bg-danger";
+      case TaskPhases.INTEGRATION:
+        return "bg-purple-500";
+      case TaskPhases.POST_CLOSE:
+        return "bg-blue-500";
       default:
-        return "bg-accent";
+        // For custom phases, return a color based on first letter to ensure consistency
+        const colors = ["bg-emerald-500", "bg-cyan-500", "bg-amber-500", "bg-teal-500", "bg-indigo-500"];
+        const colorIndex = phase.charCodeAt(0) % colors.length;
+        return colors[colorIndex];
     }
   };
   
@@ -108,8 +166,13 @@ export function TaskList({ dealId }: TaskListProps) {
         return "Deep Dive Phase";
       case TaskPhases.FINAL:
         return "Final Analysis Phase";
+      case TaskPhases.INTEGRATION:
+        return "Integration Phase";
+      case TaskPhases.POST_CLOSE:
+        return "Post-Close Phase";
       default:
-        return "Unknown Phase";
+        // For custom phases, format the phase name for display
+        return phase.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase()) + " Phase";
     }
   };
   
@@ -156,8 +219,28 @@ export function TaskList({ dealId }: TaskListProps) {
         return <span className={`${baseStyles} text-yellow-600 bg-yellow-50`}>Pending Review</span>;
       case TaskStatuses.NOT_STARTED:
         return <span className={`${baseStyles} text-neutral-600 bg-neutral-100`}>Not Started</span>;
+      case TaskStatuses.BLOCKED:
+        return <span className={`${baseStyles} text-red-600 bg-red-50`}>Blocked</span>;
+      case TaskStatuses.DEFERRED:
+        return <span className={`${baseStyles} text-purple-600 bg-purple-50`}>Deferred</span>;
       default:
-        return null;
+        // Custom status
+        if (customStatuses.includes(task.status)) {
+          // Generate a deterministic color based on the status string for consistency
+          const colors = [
+            "text-emerald-600 bg-emerald-50",
+            "text-sky-600 bg-sky-50",
+            "text-amber-600 bg-amber-50",
+            "text-teal-600 bg-teal-50",
+            "text-indigo-600 bg-indigo-50",
+            "text-rose-600 bg-rose-50"
+          ];
+          const colorIndex = task.status.charCodeAt(0) % colors.length;
+          const formattedStatus = task.status.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+          
+          return <span className={`${baseStyles} ${colors[colorIndex]}`}>{formattedStatus}</span>;
+        }
+        return <span className={`${baseStyles} text-neutral-600 bg-neutral-100`}>{task.status}</span>;
     }
   };
   
@@ -200,6 +283,11 @@ export function TaskList({ dealId }: TaskListProps) {
               <option value={TaskPhases.DOCUMENT}>Document Review</option>
               <option value={TaskPhases.DEEPDIVE}>Deep Dive</option>
               <option value={TaskPhases.FINAL}>Final Analysis</option>
+              <option value={TaskPhases.INTEGRATION}>Integration</option>
+              <option value={TaskPhases.POST_CLOSE}>Post-Close</option>
+              {customPhases.map(phase => (
+                <option key={phase} value={phase}>{phase.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}</option>
+              ))}
             </select>
           </div>
           
@@ -217,6 +305,12 @@ export function TaskList({ dealId }: TaskListProps) {
               <option value={TaskCategories.OPERATIONS}>Operations</option>
               <option value={TaskCategories.HR}>Human Resources</option>
               <option value={TaskCategories.TECH}>Technology</option>
+              <option value={TaskCategories.TAX}>Tax</option>
+              <option value={TaskCategories.STRATEGY}>Strategy</option>
+              <option value={TaskCategories.COMPLIANCE}>Compliance</option>
+              {customCategories.map(category => (
+                <option key={category} value={category}>{category.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}</option>
+              ))}
             </select>
           </div>
           
@@ -233,6 +327,11 @@ export function TaskList({ dealId }: TaskListProps) {
               <option value={TaskStatuses.IN_PROGRESS}>In Progress</option>
               <option value={TaskStatuses.PENDING}>Pending Review</option>
               <option value={TaskStatuses.COMPLETED}>Complete</option>
+              <option value={TaskStatuses.BLOCKED}>Blocked</option>
+              <option value={TaskStatuses.DEFERRED}>Deferred</option>
+              {customStatuses.map(status => (
+                <option key={status} value={status}>{status.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}</option>
+              ))}
             </select>
           </div>
           
@@ -251,108 +350,222 @@ export function TaskList({ dealId }: TaskListProps) {
             </select>
           </div>
         </div>
-      </div>
-      
-      {/* Task Lists by Phase */}
-      <div className="space-y-8">
-        {Object.keys(groupedTasks).length > 0 ? (
-          Object.entries(groupedTasks).map(([phase, tasks]) => {
-            const phaseStatus = getPhaseStatus(phase);
-            const allCompleted = tasks.every(task => task.status === TaskStatuses.COMPLETED);
-            
-            return (
-              <div key={phase} className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
-                <div className="bg-neutral-50 p-4 border-b border-neutral-200 flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className={`w-2 h-6 ${getPhaseColor(phase)} rounded-full mr-3`}></div>
-                    <h3 className="text-lg font-semibold text-neutral-900">{getPhaseTitle(phase)}</h3>
-                    <span className={`ml-3 px-2 py-1 ${
-                      allCompleted 
-                        ? "bg-success/10 text-success" 
-                        : tasks.some(t => t.status === TaskStatuses.COMPLETED)
-                          ? "bg-warning/10 text-warning"
-                          : "bg-neutral-100 text-neutral-500"
-                    } text-xs font-medium rounded-full`}>
-                      {allCompleted ? "Complete" : "In Progress"}
-                    </span>
-                  </div>
-                  <span className="text-sm text-neutral-500">{phaseStatus.complete}/{phaseStatus.total} tasks complete</span>
-                </div>
-                
-                <div className="divide-y divide-neutral-200">
-                  {tasks.map(task => (
-                    <div key={task.id} className="p-4 flex items-start">
-                      <Checkbox 
-                        id={`task-${task.id}`}
-                        checked={task.status === TaskStatuses.COMPLETED}
-                        disabled={!canModifyTask(task) || task.status === TaskStatuses.COMPLETED}
-                        onCheckedChange={() => handleTaskComplete(task)}
-                        className="mt-1 h-4 w-4 text-accent border-neutral-300 rounded focus:ring-accent"
-                      />
-                      <div className="ml-3 flex-1">
-                        <div className="flex items-center justify-between">
-                          <Link href={`/task/${task.id}`}>
-                            <a className={`text-sm font-medium text-neutral-900 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''} hover:text-primary`}>
-                              {task.title}
-                            </a>
-                          </Link>
-                          {getStatusBadge(task)}
-                        </div>
-                        <div className={`mt-1 text-sm text-neutral-500 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''}`}>
-                          {task.description}
-                        </div>
-                        <div className="mt-2 flex items-center text-xs text-neutral-500">
-                          <span className="flex items-center mr-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {task.status === TaskStatuses.COMPLETED ? (
-                              `Completed on ${task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'N/A'}`
-                            ) : (
-                              task.dueDate ? (
-                                isPast(new Date(task.dueDate)) ? (
-                                  <span className="text-danger">
-                                    Due {formatDistanceToNow(new Date(task.dueDate))} ago
-                                  </span>
-                                ) : (
-                                  `Due ${formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}`
-                                )
-                              ) : 'No due date'
-                            )}
-                          </span>
-                          <span className="flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            {users.find(u => u.id === task.assignedTo)?.name || 'Unassigned'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-neutral-500">No tasks found matching the current filters</p>
-            {(phaseFilter || categoryFilter || statusFilter || ownerFilter) && (
-              <button 
-                className="mt-2 text-primary hover:text-primary-dark text-sm font-medium"
-                onClick={() => {
-                  setPhaseFilter("");
-                  setCategoryFilter("");
-                  setStatusFilter("");
-                  setOwnerFilter("");
-                }}
-              >
-                Clear all filters
-              </button>
-            )}
+        
+        {viewMode === "date" && (
+          <div className="mt-4 flex items-center">
+            <label className="block text-sm font-medium text-neutral-700 mr-2">Sort Order:</label>
+            <Button 
+              variant={sortOrder === "asc" ? "default" : "outline"} 
+              size="sm"
+              className="mr-2"
+              onClick={() => setSortOrder("asc")}
+            >
+              Earliest First
+            </Button>
+            <Button 
+              variant={sortOrder === "desc" ? "default" : "outline"} 
+              size="sm"
+              onClick={() => setSortOrder("desc")}
+            >
+              Latest First
+            </Button>
           </div>
         )}
       </div>
+      
+      {/* Render Tasks by View Mode */}
+      {viewMode === "phase" ? (
+        // Tasks Lists by Phase
+        <div className="space-y-8">
+          {Object.keys(groupedTasks).length > 0 ? (
+            Object.entries(groupedTasks).map(([phase, tasks]) => {
+              const phaseStatus = getPhaseStatus(phase);
+              const allCompleted = tasks.every(task => task.status === TaskStatuses.COMPLETED);
+              
+              return (
+                <div key={phase} className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
+                  <div className="bg-neutral-50 p-4 border-b border-neutral-200 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className={`w-2 h-6 ${getPhaseColor(phase)} rounded-full mr-3`}></div>
+                      <h3 className="text-lg font-semibold text-neutral-900">{getPhaseTitle(phase)}</h3>
+                      <span className={`ml-3 px-2 py-1 ${
+                        allCompleted 
+                          ? "bg-success/10 text-success" 
+                          : tasks.some(t => t.status === TaskStatuses.COMPLETED)
+                            ? "bg-warning/10 text-warning"
+                            : "bg-neutral-100 text-neutral-500"
+                      } text-xs font-medium rounded-full`}>
+                        {allCompleted ? "Complete" : "In Progress"}
+                      </span>
+                    </div>
+                    <span className="text-sm text-neutral-500">{phaseStatus.complete}/{phaseStatus.total} tasks complete</span>
+                  </div>
+                  
+                  <div className="divide-y divide-neutral-200">
+                    {tasks.map(task => (
+                      <div key={task.id} className="p-4 flex items-start">
+                        <Checkbox 
+                          id={`task-${task.id}`}
+                          checked={task.status === TaskStatuses.COMPLETED}
+                          disabled={!canModifyTask(task) || task.status === TaskStatuses.COMPLETED}
+                          onCheckedChange={() => handleTaskComplete(task)}
+                          className="mt-1 h-4 w-4 text-accent border-neutral-300 rounded focus:ring-accent"
+                        />
+                        <div className="ml-3 flex-1">
+                          <div className="flex items-center justify-between">
+                            <Link href={`/task/${task.id}`}>
+                              <a className={`text-sm font-medium text-neutral-900 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''} hover:text-primary`}>
+                                {task.title}
+                              </a>
+                            </Link>
+                            {getStatusBadge(task)}
+                          </div>
+                          <div className={`mt-1 text-sm text-neutral-500 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''}`}>
+                            {task.description}
+                          </div>
+                          <div className="mt-2 flex items-center text-xs text-neutral-500">
+                            <span className="flex items-center mr-4">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              {task.status === TaskStatuses.COMPLETED ? (
+                                `Completed on ${task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'N/A'}`
+                              ) : (
+                                task.dueDate ? (
+                                  isPast(new Date(task.dueDate)) ? (
+                                    <span className="text-danger">
+                                      Due {formatDistanceToNow(new Date(task.dueDate))} ago
+                                    </span>
+                                  ) : (
+                                    `Due ${formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}`
+                                  )
+                                ) : 'No due date'
+                              )}
+                            </span>
+                            <span className="flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              {users.find(u => u.id === task.assignedTo)?.name || 'Unassigned'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              <p className="text-neutral-500">No tasks found matching the current filters</p>
+              {(phaseFilter || categoryFilter || statusFilter || ownerFilter) && (
+                <button 
+                  className="mt-2 text-primary hover:text-primary-dark text-sm font-medium"
+                  onClick={() => {
+                    setPhaseFilter("");
+                    setCategoryFilter("");
+                    setStatusFilter("");
+                    setOwnerFilter("");
+                  }}
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        // Tasks list sorted by date
+        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
+          <div className="bg-neutral-50 p-4 border-b border-neutral-200">
+            <h3 className="text-lg font-semibold text-neutral-900">Tasks by Due Date</h3>
+          </div>
+          
+          <div className="divide-y divide-neutral-200">
+            {tasksByDate.length > 0 ? (
+              tasksByDate.map(task => (
+                <div key={task.id} className="p-4 flex items-start">
+                  <Checkbox 
+                    id={`task-${task.id}`}
+                    checked={task.status === TaskStatuses.COMPLETED}
+                    disabled={!canModifyTask(task) || task.status === TaskStatuses.COMPLETED}
+                    onCheckedChange={() => handleTaskComplete(task)}
+                    className="mt-1 h-4 w-4 text-accent border-neutral-300 rounded focus:ring-accent"
+                  />
+                  <div className="ml-3 flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                      <Link href={`/task/${task.id}`}>
+                        <a className={`text-sm font-medium text-neutral-900 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''} hover:text-primary`}>
+                          {task.title}
+                        </a>
+                      </Link>
+                      <div className="flex items-center mt-1 sm:mt-0">
+                        <span className="text-xs bg-neutral-100 text-neutral-700 rounded-full px-2 py-1 mr-2">
+                          {getPhaseTitle(task.phase)}
+                        </span>
+                        {getStatusBadge(task)}
+                      </div>
+                    </div>
+                    <div className={`mt-1 text-sm text-neutral-500 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''}`}>
+                      {task.description}
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-y-2 text-xs text-neutral-500">
+                      <span className="flex items-center mr-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {task.status === TaskStatuses.COMPLETED ? (
+                          `Completed on ${task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'N/A'}`
+                        ) : (
+                          task.dueDate ? (
+                            isPast(new Date(task.dueDate)) ? (
+                              <span className="text-danger">
+                                Due {formatDistanceToNow(new Date(task.dueDate))} ago
+                              </span>
+                            ) : (
+                              `Due ${formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}`
+                            )
+                          ) : 'No due date'
+                        )}
+                      </span>
+                      <span className="flex items-center mr-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        {users.find(u => u.id === task.assignedTo)?.name || 'Unassigned'}
+                      </span>
+                      <span className="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        {task.category.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-8 text-center">
+                <p className="text-neutral-500">No tasks found matching the current filters</p>
+                {(phaseFilter || categoryFilter || statusFilter || ownerFilter) && (
+                  <button 
+                    className="mt-2 text-primary hover:text-primary-dark text-sm font-medium"
+                    onClick={() => {
+                      setPhaseFilter("");
+                      setCategoryFilter("");
+                      setStatusFilter("");
+                      setOwnerFilter("");
+                    }}
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
