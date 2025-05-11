@@ -29,7 +29,7 @@ import { Link } from "wouter";
 export default function RequestsPage() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   
   // For prototype, we'll use hardcoded dealId
   const dealId = 1;
@@ -46,7 +46,7 @@ export default function RequestsPage() {
       request.requestId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.details.toLowerCase().includes(searchTerm.toLowerCase());
       
-    const matchesStatus = statusFilter === "" || request.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || request.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -119,11 +119,11 @@ export default function RequestsPage() {
             <SelectTrigger className="w-full sm:w-[180px]">
               <div className="flex items-center">
                 <Filter className="mr-2 h-4 w-4" />
-                <span>{statusFilter ? `Status: ${statusFilter}` : "All Statuses"}</span>
+                <span>{statusFilter !== "all" ? `Status: ${statusFilter}` : "All Statuses"}</span>
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value={RequestStatuses.PENDING}>Pending</SelectItem>
               <SelectItem value={RequestStatuses.SENT}>Sent</SelectItem>
               <SelectItem value={RequestStatuses.AWAITING_RESPONSE}>Awaiting Response</SelectItem>
