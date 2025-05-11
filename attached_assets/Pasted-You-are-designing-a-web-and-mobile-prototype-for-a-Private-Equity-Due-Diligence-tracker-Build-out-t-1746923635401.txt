@@ -1,0 +1,44 @@
+You are designing a web-and-mobile prototype for a Private Equity Due Diligence tracker. Build out the core screens, user roles, and workflows as follows:
+
+1. **User Roles & Permissions**  
+   - **Deal Lead** (full access)  
+   - **Functional Lead** (Financial, Legal, Ops – can edit tasks in their specialty)  
+   - **Partner** (view-only)  
+
+2. **Primary Screens & Navigation**  
+   - **Login / SSO** screen (email + password, with “Forgot password?”)  
+   - **Dashboard**  
+     - Cards showing “Open tasks,” “Overdue items,” “Upcoming deadlines”  
+     - Activity feed (“Alice uploaded Q1 financials”)  
+   - **Checklist**  
+     - List of all due-diligence tasks grouped by phase (LOI, Document Review, Deep Dive, Final Analysis)  
+     - Filters for Phase, Category, Status, Owner  
+   - **Task Detail**  
+     - Fields: Title, Phase, Category, Due Date, Status dropdown, Assigned To, Description  
+     - File attachments area (upload/download)  
+     - “Log a Request” button that opens a mini-form (Request ID, Notes, Send date)  
+   - **Requests & Q&A**  
+     - Tabular view of all seller queries, status (“Awaiting response,” “Answered”), link back to parent Task  
+   - **RACI Matrix**  
+     - Matrix grid with Tasks on rows and R-A-C-I roles on columns; editable person-pickers  
+   - **Calendar View**  
+     - Monthly calendar showing due dates for all tasks; clicks open Task Detail  
+   - **Reports & Analytics**  
+     - Simple charts: % complete by phase, list of overdue tasks, workload per lead  
+
+3. **Key Interactions & Flows**  
+   - When a user marks a task “Done,” trigger a toast notification (“Task completed”) and update the Dashboard metrics.  
+   - Clicking “Log a Request” opens an inline slide-over form.  
+   - Drag-and-drop file upload in Task Detail.  
+   - Role-based menu – hide edit controls for Partners.  
+
+4. **Styling & Layout**  
+   - Responsive web UI with a left sidebar and top nav bar.  
+   - Clean, corporate palette (dark blue, slate gray, white), but leave color tokens adjustable.  
+   - Use card layouts on Dashboard and Checklist.  
+
+5. **Prototype Mode**  
+   - Make all buttons, links, and forms interactive.  
+   - Include at least one simulated data set (3–5 sample tasks across 2 phases).
+
+Generate this as a fully clickable prototype in both desktop web and mobile views, complete with active navigation and form modals.  
