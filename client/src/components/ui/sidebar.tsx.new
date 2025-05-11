@@ -13,7 +13,6 @@ import {
   ChevronDown,
   ChevronRight,
   Briefcase,
-  Settings
 } from "lucide-react";
 
 interface SidebarProps {
