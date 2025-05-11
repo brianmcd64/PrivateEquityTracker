@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   CheckSquare,
   MessageSquare,
-  LayoutList,
   Calendar,
   BarChart3,
   ChevronDown,
@@ -42,7 +41,6 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
     { path: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-5 w-5 mr-3 text-neutral-500" /> },
     { path: "/checklist", label: "Checklist", icon: <CheckSquare className="h-5 w-5 mr-3 text-neutral-500" /> },
     { path: "/requests", label: "Requests & Q&A", icon: <MessageSquare className="h-5 w-5 mr-3 text-neutral-500" /> },
-    { path: "/raci", label: "RACI Matrix", icon: <LayoutList className="h-5 w-5 mr-3 text-neutral-500" /> },
     { path: "/calendar", label: "Calendar", icon: <Calendar className="h-5 w-5 mr-3 text-neutral-500" /> },
     { path: "/reports", label: "Reports & Analytics", icon: <BarChart3 className="h-5 w-5 mr-3 text-neutral-500" /> },
   ];
