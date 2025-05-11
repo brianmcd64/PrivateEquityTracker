@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -38,12 +38,13 @@ export function TaskList({
   });
   
   // Fetch users to show as assignees (simplified for prototype)
-  const users = [
+  // Use useMemo to prevent recreation on each render
+  const users = useMemo(() => [
     { id: 1, name: "Sarah Johnson" },
     { id: 2, name: "Michael Reynolds" },
     { id: 3, name: "Amanda Lee" },
     { id: 4, name: "Tom Wilson" },
-  ];
+  ], []);
   
   // Group tasks by view mode
   const [groupedByPhase, setGroupedByPhase] = useState<Record<string, Task[]>>({});
