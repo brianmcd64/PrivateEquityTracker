@@ -84,7 +84,7 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
     setStatus(TaskStatuses.NOT_STARTED);
     setPriority(2);
     setAssignedTo(undefined);
-    setDueDate(undefined);
+    setDueDate(null);
     setErrors({});
   };
 
@@ -106,7 +106,8 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
       return;
     }
     
-    const taskData: InsertTask = {
+    // Create a modified InsertTask type that matches what the API expects
+    const taskData = {
       dealId,
       title,
       description,
@@ -117,7 +118,7 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
       assignedTo,
       // Convert Date to ISO string for the database
       dueDate: dueDate instanceof Date ? dueDate.toISOString() : null,
-    };
+    } as InsertTask;
     
     mutation.mutate(taskData);
   };
@@ -274,10 +275,11 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
+                {/* Using Calendar component with a type assertion for compatibility */}
                 <Calendar
                   mode="single"
-                  selected={dueDate}
-                  onSelect={(date) => setDueDate(date)}
+                  selected={dueDate as any}
+                  onSelect={(date: Date | undefined) => setDueDate(date || null)}
                   disabled={(date) => date < new Date("1900-01-01")}
                   initialFocus
                 />
