@@ -1,7 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Sidebar } from "@/components/ui/sidebar";
 import { UserMenu } from "@/components/ui/user-menu";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Menu } from "lucide-react";
 import { Link } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -56,9 +55,8 @@ export function Layout({ children, title, subtitle }: LayoutProps) {
           </div>
 
           <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <UserMenu />
-          </div>
+              <UserMenu />
+            </div>
         </div>
       </header>
 
