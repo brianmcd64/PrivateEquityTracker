@@ -256,11 +256,15 @@ export const UserRoles = {
   PARTNER: "partner",
 } as const;
 
+// Default Task Phases, Categories, and Statuses
 export const TaskPhases = {
   LOI: "loi",
   DOCUMENT: "document",
   DEEPDIVE: "deepdive",
   FINAL: "final",
+  INTEGRATION: "integration",
+  POST_CLOSE: "post_close",
+  CUSTOM: "custom",
 } as const;
 
 export const TaskCategories = {
@@ -269,6 +273,10 @@ export const TaskCategories = {
   OPERATIONS: "operations",
   HR: "hr",
   TECH: "tech",
+  TAX: "tax",
+  STRATEGY: "strategy",
+  COMPLIANCE: "compliance",
+  CUSTOM: "custom",
 } as const;
 
 export const TaskStatuses = {
@@ -276,6 +284,9 @@ export const TaskStatuses = {
   IN_PROGRESS: "in_progress",
   PENDING: "pending",
   COMPLETED: "completed",
+  BLOCKED: "blocked",
+  DEFERRED: "deferred",
+  CUSTOM: "custom",
 } as const;
 
 export const RequestTypes = {
