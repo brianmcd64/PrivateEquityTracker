@@ -34,7 +34,7 @@ export default function ChecklistPage() {
   const dealId = 1;
   
   // View mode state
-  const [viewMode, setViewMode] = useState<"phase" | "date">("phase");
+  const [viewMode, setViewMode] = useState<"phase" | "date" | "category">("phase");
 
   // Customize dialogs
   const [customizeDialogOpen, setCustomizeDialogOpen] = useState(false);
@@ -150,15 +150,20 @@ export default function ChecklistPage() {
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col sm:flex-row gap-3 mb-4 md:mb-0">
           {/* View Mode Selector */}
-          <Select value={viewMode} onValueChange={(value) => setViewMode(value as "phase" | "date")}>
+          <Select value={viewMode} onValueChange={(value) => setViewMode(value as "phase" | "date" | "category")}>
             <SelectTrigger className="w-[180px]">
               <div className="flex items-center">
                 <ListFilter className="mr-2 h-4 w-4" />
-                <span>View: {viewMode === "phase" ? "By Phase" : "By Date"}</span>
+                <span>View: {
+                  viewMode === "phase" ? "By Phase" : 
+                  viewMode === "category" ? "By Category" : 
+                  "By Date"
+                }</span>
               </div>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="phase">View by Phase</SelectItem>
+              <SelectItem value="category">View by Category</SelectItem>
               <SelectItem value="date">View by Date</SelectItem>
             </SelectContent>
           </Select>

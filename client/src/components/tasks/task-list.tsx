@@ -11,7 +11,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface TaskListProps {
   dealId: number;
-  viewMode?: "phase" | "date";
+  viewMode?: "phase" | "date" | "category";
   customPhases?: string[];
   customCategories?: string[];
   customStatuses?: string[];
@@ -46,7 +46,8 @@ export function TaskList({
   ];
   
   // Group tasks by view mode
-  const [groupedTasks, setGroupedTasks] = useState<Record<string, Task[]>>({});
+  const [groupedByPhase, setGroupedByPhase] = useState<Record<string, Task[]>>({});
+  const [groupedByCategory, setGroupedByCategory] = useState<Record<string, Task[]>>({});
   const [tasksByDate, setTasksByDate] = useState<Task[]>([]);
   
   useEffect(() => {
@@ -92,8 +93,42 @@ export function TaskList({
           }
         });
         
-        setGroupedTasks(grouped);
-      } else {
+        setGroupedByPhase(grouped);
+      } 
+      else if (viewMode === "category") {
+        // Group by category
+        const grouped: Record<string, Task[]> = {};
+        
+        // Start with standard categories
+        Object.values(TaskCategories).forEach(category => {
+          grouped[category] = [];
+        });
+        
+        // Add custom categories
+        customCategories.forEach(category => {
+          if (!grouped[category]) {
+            grouped[category] = [];
+          }
+        });
+        
+        // Sort tasks into categories
+        for (const task of filteredTasks) {
+          if (!grouped[task.category]) {
+            grouped[task.category] = [];
+          }
+          grouped[task.category].push(task);
+        }
+        
+        // Remove empty categories
+        Object.keys(grouped).forEach(category => {
+          if (grouped[category].length === 0) {
+            delete grouped[category];
+          }
+        });
+        
+        setGroupedByCategory(grouped);
+      } 
+      else {
         // For date view, sort tasks by due date
         const sortedTasks = [...filteredTasks].sort((a, b) => {
           // Handle tasks without due dates (place at the end)
@@ -110,7 +145,7 @@ export function TaskList({
         setTasksByDate(sortedTasks);
       }
     }
-  }, [tasks, phaseFilter, categoryFilter, statusFilter, ownerFilter, viewMode, customPhases, sortOrder]);
+  }, [tasks, phaseFilter, categoryFilter, statusFilter, ownerFilter, viewMode, customPhases, customCategories, sortOrder]);
   
   const handleTaskComplete = async (task: Task) => {
     try {
@@ -377,10 +412,10 @@ export function TaskList({
       {viewMode === "phase" ? (
         // Tasks Lists by Phase
         <div className="space-y-8">
-          {Object.keys(groupedTasks).length > 0 ? (
-            Object.entries(groupedTasks).map(([phase, tasks]) => {
+          {Object.keys(groupedByPhase).length > 0 ? (
+            Object.entries(groupedByPhase).map(([phase, phaseTasks]) => {
               const phaseStatus = getPhaseStatus(phase);
-              const allCompleted = tasks.every(task => task.status === TaskStatuses.COMPLETED);
+              const allCompleted = phaseTasks.every(task => task.status === TaskStatuses.COMPLETED);
               
               return (
                 <div key={phase} className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
@@ -391,7 +426,7 @@ export function TaskList({
                       <span className={`ml-3 px-2 py-1 ${
                         allCompleted 
                           ? "bg-success/10 text-success" 
-                          : tasks.some(t => t.status === TaskStatuses.COMPLETED)
+                          : phaseTasks.some(t => t.status === TaskStatuses.COMPLETED)
                             ? "bg-warning/10 text-warning"
                             : "bg-neutral-100 text-neutral-500"
                       } text-xs font-medium rounded-full`}>
@@ -402,7 +437,7 @@ export function TaskList({
                   </div>
                   
                   <div className="divide-y divide-neutral-200">
-                    {tasks.map(task => (
+                    {phaseTasks.map(task => (
                       <div key={task.id} className="p-4 flex items-start">
                         <Checkbox 
                           id={`task-${task.id}`}
@@ -442,11 +477,131 @@ export function TaskList({
                                 ) : 'No due date'
                               )}
                             </span>
-                            <span className="flex items-center">
+                            <span className="flex items-center mr-4">
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                               </svg>
                               {users.find(u => u.id === task.assignedTo)?.name || 'Unassigned'}
+                            </span>
+                            <span className="flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                              </svg>
+                              {task.category.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              <p className="text-neutral-500">No tasks found matching the current filters</p>
+              {(phaseFilter || categoryFilter || statusFilter || ownerFilter) && (
+                <button 
+                  className="mt-2 text-primary hover:text-primary-dark text-sm font-medium"
+                  onClick={() => {
+                    setPhaseFilter("");
+                    setCategoryFilter("");
+                    setStatusFilter("");
+                    setOwnerFilter("");
+                  }}
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      ) : viewMode === "category" ? (
+        // Tasks Lists by Category
+        <div className="space-y-8">
+          {Object.keys(groupedByCategory).length > 0 ? (
+            Object.entries(groupedByCategory).map(([category, categoryTasks]) => {
+              const allCompleted = categoryTasks.every(task => task.status === TaskStatuses.COMPLETED);
+              const completedCount = categoryTasks.filter(task => task.status === TaskStatuses.COMPLETED).length;
+              
+              // Get a consistent color for the category
+              const colors = ["bg-teal-500", "bg-indigo-500", "bg-amber-500", "bg-emerald-500", "bg-fuchsia-500", "bg-cyan-500"];
+              const colorIndex = category.charCodeAt(0) % colors.length;
+              const categoryColor = colors[colorIndex];
+              
+              return (
+                <div key={category} className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
+                  <div className="bg-neutral-50 p-4 border-b border-neutral-200 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className={`w-2 h-6 ${categoryColor} rounded-full mr-3`}></div>
+                      <h3 className="text-lg font-semibold text-neutral-900">
+                        {category.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+                      </h3>
+                      <span className={`ml-3 px-2 py-1 ${
+                        allCompleted 
+                          ? "bg-success/10 text-success" 
+                          : categoryTasks.some(t => t.status === TaskStatuses.COMPLETED)
+                            ? "bg-warning/10 text-warning"
+                            : "bg-neutral-100 text-neutral-500"
+                      } text-xs font-medium rounded-full`}>
+                        {allCompleted ? "Complete" : "In Progress"}
+                      </span>
+                    </div>
+                    <span className="text-sm text-neutral-500">{completedCount}/{categoryTasks.length} tasks complete</span>
+                  </div>
+                  
+                  <div className="divide-y divide-neutral-200">
+                    {categoryTasks.map(task => (
+                      <div key={task.id} className="p-4 flex items-start">
+                        <Checkbox 
+                          id={`task-${task.id}`}
+                          checked={task.status === TaskStatuses.COMPLETED}
+                          disabled={!canModifyTask(task) || task.status === TaskStatuses.COMPLETED}
+                          onCheckedChange={() => handleTaskComplete(task)}
+                          className="mt-1 h-4 w-4 text-accent border-neutral-300 rounded focus:ring-accent"
+                        />
+                        <div className="ml-3 flex-1">
+                          <div className="flex items-center justify-between">
+                            <Link href={`/task/${task.id}`}>
+                              <a className={`text-sm font-medium text-neutral-900 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''} hover:text-primary`}>
+                                {task.title}
+                              </a>
+                            </Link>
+                            {getStatusBadge(task)}
+                          </div>
+                          <div className={`mt-1 text-sm text-neutral-500 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''}`}>
+                            {task.description}
+                          </div>
+                          <div className="mt-2 flex items-center text-xs text-neutral-500">
+                            <span className="flex items-center mr-4">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              {task.status === TaskStatuses.COMPLETED ? (
+                                `Completed on ${task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'N/A'}`
+                              ) : (
+                                task.dueDate ? (
+                                  isPast(new Date(task.dueDate)) ? (
+                                    <span className="text-danger">
+                                      Due {formatDistanceToNow(new Date(task.dueDate))} ago
+                                    </span>
+                                  ) : (
+                                    `Due ${formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}`
+                                  )
+                                ) : 'No due date'
+                              )}
+                            </span>
+                            <span className="flex items-center mr-4">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              {users.find(u => u.id === task.assignedTo)?.name || 'Unassigned'}
+                            </span>
+                            <span className="flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                              </svg>
+                              {getPhaseTitle(task.phase)}
                             </span>
                           </div>
                         </div>
