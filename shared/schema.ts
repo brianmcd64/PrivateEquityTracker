@@ -1,6 +1,7 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // User model
 export const users = pgTable("users", {
@@ -149,6 +150,82 @@ export const insertActivityLogSchema = createInsertSchema(activityLogs).pick({
   entityId: true,
   details: true,
 });
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  assignedTasks: many(tasks, { relationName: "user_tasks" }),
+  uploadedDocuments: many(documents),
+  createdRequests: many(requests),
+  activityLogs: many(activityLogs),
+}));
+
+export const dealsRelations = relations(deals, ({ many }) => ({
+  tasks: many(tasks),
+  raciMatrices: many(raciMatrix),
+  activityLogs: many(activityLogs),
+}));
+
+export const tasksRelations = relations(tasks, ({ one, many }) => ({
+  deal: one(deals, {
+    fields: [tasks.dealId],
+    references: [deals.id],
+  }),
+  assignee: one(users, {
+    fields: [tasks.assignedTo],
+    references: [users.id],
+    relationName: "user_tasks",
+  }),
+  documents: many(documents),
+  requests: many(requests),
+  raciMatrix: one(raciMatrix, {
+    fields: [tasks.id],
+    references: [raciMatrix.taskId],
+  }),
+}));
+
+export const documentsRelations = relations(documents, ({ one }) => ({
+  task: one(tasks, {
+    fields: [documents.taskId],
+    references: [tasks.id],
+  }),
+  uploader: one(users, {
+    fields: [documents.uploadedBy],
+    references: [users.id],
+  }),
+}));
+
+export const requestsRelations = relations(requests, ({ one }) => ({
+  task: one(tasks, {
+    fields: [requests.taskId],
+    references: [tasks.id],
+  }),
+  creator: one(users, {
+    fields: [requests.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const raciMatrixRelations = relations(raciMatrix, ({ one }) => ({
+  deal: one(deals, {
+    fields: [raciMatrix.dealId],
+    references: [deals.id],
+  }),
+  task: one(tasks, {
+    fields: [raciMatrix.taskId],
+    references: [tasks.id],
+  }),
+}));
+
+export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
+  deal: one(deals, {
+    fields: [activityLogs.dealId],
+    references: [deals.id],
+  }),
+  user: one(users, {
+    fields: [activityLogs.userId],
+    references: [users.id],
+  }),
+}));
 
 // Type exports
 export type User = typeof users.$inferSelect;

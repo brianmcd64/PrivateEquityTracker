@@ -56,14 +56,19 @@ const canModifyTask = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup authentication
-  await setupAuth(app);
-  
-  // Seed admin user
-  await seedAdmin();
-  
-  // Seed initial data
-  await seedInitialData();
+  try {
+    // Setup authentication
+    await setupAuth(app);
+    
+    // Seed admin user
+    await seedAdmin();
+    
+    // Seed initial data
+    await seedInitialData();
+  } catch (error) {
+    console.error("Error during setup:", error);
+    throw error;
+  }
 
   // ============================
   // Deal Routes
