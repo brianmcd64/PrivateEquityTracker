@@ -9,11 +9,13 @@ import { PhaseStatus } from "@/components/dashboard/phase-status";
 import { Button } from "@/components/ui/button";
 import { Task, TaskStatuses, Deal } from "@shared/schema";
 import { PlusCircle, Download } from "lucide-react";
+import { CreateTaskForm } from "@/components/tasks/create-task-form";
 
 export default function DashboardPage() {
   const [, navigate] = useLocation();
   const [dealId, setDealId] = useState<number | null>(null);
   const [dealName, setDealName] = useState<string>("");
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   
   // Load active deal from localStorage
   useEffect(() => {
@@ -44,6 +46,16 @@ export default function DashboardPage() {
     queryKey: dealId ? [`/api/deals/${dealId}/tasks`] : ['skip-tasks-query'],
     enabled: !!dealId,
   });
+  
+  // Handle opening the create task dialog
+  const handleOpenCreateTask = () => {
+    setIsCreateTaskOpen(true);
+  };
+  
+  // Handle closing the create task dialog
+  const handleCloseCreateTask = () => {
+    setIsCreateTaskOpen(false);
+  };
   
   // Calculate metrics
   const calculateMetrics = () => {
@@ -125,7 +137,11 @@ export default function DashboardPage() {
         </div>
         
         <div className="flex flex-col md:flex-row gap-3">
-          <Button variant="default" className="flex items-center">
+          <Button 
+            variant="default" 
+            className="flex items-center"
+            onClick={handleOpenCreateTask}
+          >
             <PlusCircle className="h-4 w-4 mr-2" />
             New Task
           </Button>
@@ -201,6 +217,15 @@ export default function DashboardPage() {
           <PhaseStatus dealId={dealId} />
         </div>
       </div>
+      
+      {/* Create Task Dialog */}
+      {dealId && (
+        <CreateTaskForm 
+          isOpen={isCreateTaskOpen} 
+          onClose={handleCloseCreateTask}
+          dealId={dealId}
+        />
+      )}
     </Layout>
   );
 }
