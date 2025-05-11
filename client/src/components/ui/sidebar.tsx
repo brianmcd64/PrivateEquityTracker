@@ -116,9 +116,11 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
           )}
           
           {user?.role === "deal_lead" && (
-            <button className="mt-3 w-full text-sm text-primary font-medium flex items-center justify-center">
-              <span className="mr-1">+</span> Add New Deal
-            </button>
+            <Link href="/deals/new">
+              <a className="mt-3 w-full text-sm text-primary font-medium flex items-center justify-center">
+                <span className="mr-1">+</span> Add New Deal
+              </a>
+            </Link>
           )}
         </div>
       </nav>
