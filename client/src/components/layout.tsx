@@ -54,7 +54,10 @@ export function Layout({ children, title, subtitle }: LayoutProps) {
             </div>
           </div>
 
-          <UserMenu />
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <UserMenu />
+          </div>
         </div>
       </header>
 

@@ -28,9 +28,11 @@ function Router() {
 
 function App() {
   return (
-    <TooltipProvider>
-      <Router />
-    </TooltipProvider>
+    <ThemeProvider defaultTheme="system">
+      <TooltipProvider>
+        <Router />
+      </TooltipProvider>
+    </ThemeProvider>
   );
 }
 
