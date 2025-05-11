@@ -455,11 +455,11 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={TaskCategories.FINANCIAL}>Financial</SelectItem>
-                        <SelectItem value={TaskCategories.LEGAL}>Legal</SelectItem>
-                        <SelectItem value={TaskCategories.OPERATIONS}>Operations</SelectItem>
-                        <SelectItem value={TaskCategories.HR}>Human Resources</SelectItem>
-                        <SelectItem value={TaskCategories.TECH}>Technology</SelectItem>
+                        <SelectItem value={TaskCategories.FINANCIAL || "financial"}>Financial</SelectItem>
+                        <SelectItem value={TaskCategories.LEGAL || "legal"}>Legal</SelectItem>
+                        <SelectItem value={TaskCategories.OPERATIONS || "operations"}>Operations</SelectItem>
+                        <SelectItem value={TaskCategories.HR || "hr"}>Human Resources</SelectItem>
+                        <SelectItem value={TaskCategories.TECH || "tech"}>Technology</SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (
