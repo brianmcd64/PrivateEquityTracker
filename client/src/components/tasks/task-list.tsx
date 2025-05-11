@@ -662,6 +662,130 @@ export function TaskList({
             </div>
           )}
         </div>
+      ) : viewMode === "owner" ? (
+        // Tasks Lists by Owner
+        <div className="space-y-8">
+          {Object.keys(groupedByOwner).length > 0 ? (
+            Object.entries(groupedByOwner).map(([ownerId, ownerTasks]) => {
+              // Get owner info
+              let ownerName = "Unassigned";
+              let ownerColor = "bg-gray-400";
+              
+              if (ownerId !== "unassigned") {
+                const owner = users.find(u => u.id.toString() === ownerId);
+                if (owner) {
+                  ownerName = owner.name;
+                  // Get a consistent color for the owner
+                  const colors = ["bg-blue-500", "bg-purple-500", "bg-pink-500", "bg-orange-500", "bg-green-500", "bg-yellow-500"];
+                  const colorIndex = owner.name.charCodeAt(0) % colors.length;
+                  ownerColor = colors[colorIndex];
+                }
+              }
+              
+              const allCompleted = ownerTasks.every(task => task.status === TaskStatuses.COMPLETED);
+              const completedCount = ownerTasks.filter(task => task.status === TaskStatuses.COMPLETED).length;
+              
+              return (
+                <div key={ownerId} className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
+                  <div className="bg-neutral-50 p-4 border-b border-neutral-200 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className={`w-2 h-6 ${ownerColor} rounded-full mr-3`}></div>
+                      <h3 className="text-lg font-semibold text-neutral-900">
+                        {ownerName}
+                      </h3>
+                      <span className={`ml-3 px-2 py-1 ${
+                        allCompleted 
+                          ? "bg-success/10 text-success" 
+                          : ownerTasks.some(t => t.status === TaskStatuses.COMPLETED)
+                            ? "bg-warning/10 text-warning"
+                            : "bg-neutral-100 text-neutral-500"
+                      } text-xs font-medium rounded-full`}>
+                        {allCompleted ? "Complete" : "In Progress"}
+                      </span>
+                    </div>
+                    <span className="text-sm text-neutral-500">{completedCount}/{ownerTasks.length} tasks complete</span>
+                  </div>
+                  
+                  <div className="divide-y divide-neutral-200">
+                    {ownerTasks.map(task => (
+                      <div key={task.id} className="p-4 flex items-start">
+                        <Checkbox 
+                          id={`task-${task.id}`}
+                          checked={task.status === TaskStatuses.COMPLETED}
+                          disabled={!canModifyTask(task) || task.status === TaskStatuses.COMPLETED}
+                          onCheckedChange={() => handleTaskComplete(task)}
+                          className="mt-1 h-4 w-4 text-accent border-neutral-300 rounded focus:ring-accent"
+                        />
+                        <div className="ml-3 flex-1">
+                          <div className="flex items-center justify-between">
+                            <Link href={`/task/${task.id}`}>
+                              <a className={`text-sm font-medium text-neutral-900 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''} hover:text-primary`}>
+                                {task.title}
+                              </a>
+                            </Link>
+                            {getStatusBadge(task)}
+                          </div>
+                          <div className={`mt-1 text-sm text-neutral-500 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''}`}>
+                            {task.description}
+                          </div>
+                          <div className="mt-2 flex items-center text-xs text-neutral-500">
+                            <span className="flex items-center mr-4">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              {task.status === TaskStatuses.COMPLETED ? (
+                                `Completed on ${task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'N/A'}`
+                              ) : (
+                                task.dueDate ? (
+                                  isPast(new Date(task.dueDate)) ? (
+                                    <span className="text-danger">
+                                      Due {formatDistanceToNow(new Date(task.dueDate))} ago
+                                    </span>
+                                  ) : (
+                                    `Due ${formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}`
+                                  )
+                                ) : 'No due date'
+                              )}
+                            </span>
+                            <span className="flex items-center mr-4">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                              </svg>
+                              {getPhaseTitle(task.phase)}
+                            </span>
+                            <span className="flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                              </svg>
+                              {task.category.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              <p className="text-neutral-500">No tasks found matching the current filters</p>
+              {(phaseFilter || categoryFilter || statusFilter || ownerFilter) && (
+                <button 
+                  className="mt-2 text-primary hover:text-primary-dark text-sm font-medium"
+                  onClick={() => {
+                    setPhaseFilter("");
+                    setCategoryFilter("");
+                    setStatusFilter("");
+                    setOwnerFilter("");
+                  }}
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       ) : (
         // Tasks list sorted by date
         <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
