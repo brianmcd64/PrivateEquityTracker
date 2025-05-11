@@ -35,7 +35,7 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
   const [status, setStatus] = useState<string>(TaskStatuses.NOT_STARTED);
   const [priority, setPriority] = useState<number>(2);
   const [assignedTo, setAssignedTo] = useState<number | undefined>(undefined);
-  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [dueDate, setDueDate] = useState<Date | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Mock users data (for prototype)
@@ -115,8 +115,8 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
       status,
       priority,
       assignedTo,
-      // InsertTask expects a string for the date
-      dueDate: dueDate ? dueDate.toISOString() : undefined,
+      // Convert Date to ISO string for the database
+      dueDate: dueDate instanceof Date ? dueDate.toISOString() : null,
     };
     
     mutation.mutate(taskData);
@@ -277,7 +277,7 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
                 <Calendar
                   mode="single"
                   selected={dueDate}
-                  onSelect={setDueDate}
+                  onSelect={(date) => setDueDate(date)}
                   disabled={(date) => date < new Date("1900-01-01")}
                   initialFocus
                 />
