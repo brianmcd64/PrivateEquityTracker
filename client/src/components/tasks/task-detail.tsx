@@ -517,14 +517,14 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                   {editMode ? (
                     <Select 
                       name="assignedTo" 
-                      value={formState.assignedTo?.toString() || ""} 
-                      onValueChange={(value) => handleSelectChange("assignedTo", value)}
+                      value={formState.assignedTo?.toString() || "unassigned"} 
+                      onValueChange={(value) => handleSelectChange("assignedTo", value === "unassigned" ? "" : value)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select assignee" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Unassigned</SelectItem>
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
                         {Object.values(userMap).map(user => (
                           <SelectItem key={user.id} value={user.id.toString()}>{user.name}</SelectItem>
                         ))}
