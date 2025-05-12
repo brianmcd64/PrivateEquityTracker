@@ -124,7 +124,15 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createTask(insertTask: InsertTask): Promise<Task> {
-    const [task] = await db.insert(schema.tasks).values(insertTask).returning();
+    // Handle date string conversion properly
+    const taskData = {
+      ...insertTask,
+      // If dueDate is a string, convert it to a Date object for the database
+      // If it's null/undefined, keep it as is
+      dueDate: insertTask.dueDate ? new Date(insertTask.dueDate) : insertTask.dueDate
+    };
+    
+    const [task] = await db.insert(schema.tasks).values(taskData).returning();
     return task;
   }
   
@@ -140,9 +148,17 @@ export class DatabaseStorage implements IStorage {
       completedAt = null;
     }
     
+    // Handle dueDate conversion if it's provided as a string
+    const taskData = {
+      ...taskUpdate,
+      // Convert dueDate string to Date if present
+      dueDate: taskUpdate.dueDate ? new Date(taskUpdate.dueDate) : taskUpdate.dueDate,
+      completedAt
+    };
+    
     const [updatedTask] = await db
       .update(schema.tasks)
-      .set({ ...taskUpdate, completedAt })
+      .set(taskData)
       .where(eq(schema.tasks.id, id))
       .returning();
     
