@@ -239,14 +239,14 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
             <div className="space-y-2">
               <Label htmlFor="assignedTo">Assigned To</Label>
               <Select 
-                value={assignedTo?.toString() || ""} 
-                onValueChange={(value) => setAssignedTo(value ? parseInt(value) : undefined)}
+                value={assignedTo?.toString() || "unassigned"} 
+                onValueChange={(value) => setAssignedTo(value === "unassigned" ? undefined : parseInt(value))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select team member" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {users.map(user => (
                     <SelectItem key={user.id} value={user.id.toString()}>
                       {user.name}
