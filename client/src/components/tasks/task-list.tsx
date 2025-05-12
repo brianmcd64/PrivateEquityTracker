@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { Task, TaskPhases, TaskCategories, TaskStatuses } from "@shared/schema";
 import { formatDistanceToNow, isPast, addDays } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,12 +21,22 @@ interface TaskListProps {
 export function TaskList({ 
   dealId,
   viewMode = "phase",
-  customPhases = [],
-  customCategories = [],
-  customStatuses = []
+  customPhases: propCustomPhases = [],
+  customCategories: propCustomCategories = [],
+  customStatuses: propCustomStatuses = []
 }: TaskListProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Load custom fields from localStorage, fallback to props if not available
+  const [storedCustomPhases] = useLocalStorage<string[]>("customPhases", []);
+  const [storedCustomCategories] = useLocalStorage<string[]>("customCategories", []);
+  const [storedCustomStatuses] = useLocalStorage<string[]>("customStatuses", []);
+  
+  // Combine custom fields from props and localStorage (prefer localStorage)
+  const customPhases = storedCustomPhases.length > 0 ? storedCustomPhases : propCustomPhases;
+  const customCategories = storedCustomCategories.length > 0 ? storedCustomCategories : propCustomCategories;
+  const customStatuses = storedCustomStatuses.length > 0 ? storedCustomStatuses : propCustomStatuses;
   const [phaseFilter, setPhaseFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");

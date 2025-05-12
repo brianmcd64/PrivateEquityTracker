@@ -223,6 +223,15 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
       case TaskStatuses.NOT_STARTED:
         return <span className="text-xs font-medium bg-neutral-200 text-neutral-700 px-2 py-0.5 rounded-full">Not Started</span>;
       default:
+        // Check if this is a custom status from localStorage
+        if (customStatuses.includes(status)) {
+          // Use a default styling for custom statuses
+          return (
+            <span className="text-xs font-medium bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">
+              {status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')}
+            </span>
+          );
+        }
         return null;
     }
   };
