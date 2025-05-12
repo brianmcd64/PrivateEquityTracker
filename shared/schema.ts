@@ -49,16 +49,22 @@ export const tasks = pgTable("tasks", {
   completedAt: timestamp("completed_at"),
 });
 
-export const insertTaskSchema = createInsertSchema(tasks).pick({
+// Create base schema from database table
+const baseTaskSchema = createInsertSchema(tasks);
+
+// Create a modified version that properly handles date strings for insertion
+export const insertTaskSchema = baseTaskSchema.pick({
   dealId: true,
   title: true,
   description: true,
   phase: true,
   category: true,
   status: true,
-  dueDate: true,
   assignedTo: true,
   completedAt: true,
+}).extend({
+  // Override dueDate to accept ISO date strings
+  dueDate: z.string().datetime().nullable().optional(),
 });
 
 // Documents model
