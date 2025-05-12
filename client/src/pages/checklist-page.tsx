@@ -68,10 +68,21 @@ export default function ChecklistPage() {
   const [customizeDialogOpen, setCustomizeDialogOpen] = useState(false);
   const [manageCustomFieldsOpen, setManageCustomFieldsOpen] = useState(false);
   
-  // Custom fields management
-  const [customPhases, setCustomPhases] = useState<string[]>([]);
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
-  const [customStatuses, setCustomStatuses] = useState<string[]>([]);
+  // Custom fields management with localStorage persistence
+  const [customPhases, setCustomPhases] = useState<string[]>(() => {
+    const saved = localStorage.getItem("customPhases");
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [customCategories, setCustomCategories] = useState<string[]>(() => {
+    const saved = localStorage.getItem("customCategories");
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [customStatuses, setCustomStatuses] = useState<string[]>(() => {
+    const saved = localStorage.getItem("customStatuses");
+    return saved ? JSON.parse(saved) : [];
+  });
   
   // Task creation state
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
@@ -103,7 +114,9 @@ export default function ChecklistPage() {
     switch (newCustomFieldType) {
       case "phase":
         if (!customPhases.includes(formattedValue)) {
-          setCustomPhases([...customPhases, formattedValue]);
+          const updatedPhases = [...customPhases, formattedValue];
+          setCustomPhases(updatedPhases);
+          localStorage.setItem("customPhases", JSON.stringify(updatedPhases));
           toast({
             title: "Custom Phase Added",
             description: `Added new phase: ${newCustomFieldValue}`
@@ -118,7 +131,9 @@ export default function ChecklistPage() {
         break;
       case "category":
         if (!customCategories.includes(formattedValue)) {
-          setCustomCategories([...customCategories, formattedValue]);
+          const updatedCategories = [...customCategories, formattedValue];
+          setCustomCategories(updatedCategories);
+          localStorage.setItem("customCategories", JSON.stringify(updatedCategories));
           toast({
             title: "Custom Category Added",
             description: `Added new category: ${newCustomFieldValue}`
@@ -133,7 +148,9 @@ export default function ChecklistPage() {
         break;
       case "status":
         if (!customStatuses.includes(formattedValue)) {
-          setCustomStatuses([...customStatuses, formattedValue]);
+          const updatedStatuses = [...customStatuses, formattedValue];
+          setCustomStatuses(updatedStatuses);
+          localStorage.setItem("customStatuses", JSON.stringify(updatedStatuses));
           toast({
             title: "Custom Status Added",
             description: `Added new status: ${newCustomFieldValue}`
@@ -154,13 +171,19 @@ export default function ChecklistPage() {
   const removeCustomField = (type: "phase" | "category" | "status", value: string) => {
     switch (type) {
       case "phase":
-        setCustomPhases(customPhases.filter(p => p !== value));
+        const updatedPhases = customPhases.filter(p => p !== value);
+        setCustomPhases(updatedPhases);
+        localStorage.setItem("customPhases", JSON.stringify(updatedPhases));
         break;
       case "category":
-        setCustomCategories(customCategories.filter(c => c !== value));
+        const updatedCategories = customCategories.filter(c => c !== value);
+        setCustomCategories(updatedCategories);
+        localStorage.setItem("customCategories", JSON.stringify(updatedCategories));
         break;
       case "status":
-        setCustomStatuses(customStatuses.filter(s => s !== value));
+        const updatedStatuses = customStatuses.filter(s => s !== value);
+        setCustomStatuses(updatedStatuses);
+        localStorage.setItem("customStatuses", JSON.stringify(updatedStatuses));
         break;
     }
     

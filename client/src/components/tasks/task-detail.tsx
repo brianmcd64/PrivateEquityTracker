@@ -54,7 +54,7 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
     category: "",
     status: "",
     dueDate: "",
-    assignedTo: 0,
+    assignedTo: 0 as number | undefined, // Using type assertion to allow undefined
   });
   
   useEffect(() => {
