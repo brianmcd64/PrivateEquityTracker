@@ -138,7 +138,15 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
   };
   
   const handleSelectChange = (name: string, value: string) => {
-    setFormState((prev) => ({ ...prev, [name]: value }));
+    if (name === "assignedTo") {
+      // Convert to number or keep as undefined/null
+      setFormState((prev) => ({ 
+        ...prev, 
+        [name]: value ? parseInt(value) : undefined 
+      }));
+    } else {
+      setFormState((prev) => ({ ...prev, [name]: value }));
+    }
   };
   
   const handleSave = () => {
