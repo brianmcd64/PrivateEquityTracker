@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Download, Trash2, Upload, ChevronLeft } from "lucide-react";
@@ -27,6 +27,11 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
   const { user } = useAuth();
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  
+  // Load custom fields from localStorage
+  const [customPhases] = useLocalStorage<string[]>("customPhases", []);
+  const [customCategories] = useLocalStorage<string[]>("customCategories", []);
+  const [customStatuses] = useLocalStorage<string[]>("customStatuses", []);
   
   // Fetch task details
   const { data: task, isLoading: isTaskLoading, isError: isTaskError } = useQuery<Task>({
@@ -442,13 +447,28 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                         <SelectItem value={TaskPhases.DOCUMENT}>Document Review</SelectItem>
                         <SelectItem value={TaskPhases.DEEPDIVE}>Deep Dive</SelectItem>
                         <SelectItem value={TaskPhases.FINAL}>Final Analysis</SelectItem>
+                        
+                        {/* Display custom phases */}
+                        {customPhases.length > 0 && <SelectSeparator />}
+                        {customPhases.map((phase) => (
+                          <SelectItem key={phase} value={phase}>
+                            {phase.charAt(0).toUpperCase() + phase.slice(1).replace(/_/g, ' ')}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="text-sm py-1.5">{task.phase === TaskPhases.LOI ? "LOI" : 
-                      task.phase === TaskPhases.DOCUMENT ? "Document Review" : 
-                      task.phase === TaskPhases.DEEPDIVE ? "Deep Dive" : 
-                      "Final Analysis"}</div>
+                    <div className="text-sm py-1.5">
+                      {task.phase === TaskPhases.LOI ? "LOI" : 
+                       task.phase === TaskPhases.DOCUMENT ? "Document Review" : 
+                       task.phase === TaskPhases.DEEPDIVE ? "Deep Dive" : 
+                       task.phase === TaskPhases.FINAL ? "Final Analysis" : 
+                       // Handle custom phases
+                       customPhases.includes(task.phase) ? 
+                         task.phase.charAt(0).toUpperCase() + task.phase.slice(1).replace(/_/g, ' ') : 
+                         task.phase
+                      }
+                    </div>
                   )}
                 </div>
                 
@@ -469,10 +489,22 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                         <SelectItem value={TaskCategories.OPERATIONS || "operations"}>Operations</SelectItem>
                         <SelectItem value={TaskCategories.HR || "hr"}>Human Resources</SelectItem>
                         <SelectItem value={TaskCategories.TECH || "tech"}>Technology</SelectItem>
+                        
+                        {/* Display custom categories */}
+                        {customCategories.length > 0 && <Separator className="my-1" />}
+                        {customCategories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, ' ')}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="text-sm py-1.5">{task.category.charAt(0).toUpperCase() + task.category.slice(1)}</div>
+                    <div className="text-sm py-1.5">
+                      {customCategories.includes(task.category) ? 
+                        task.category.charAt(0).toUpperCase() + task.category.slice(1).replace(/_/g, ' ') : 
+                        task.category.charAt(0).toUpperCase() + task.category.slice(1)}
+                    </div>
                   )}
                 </div>
                 
@@ -492,6 +524,14 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                         <SelectItem value={TaskStatuses.IN_PROGRESS}>In Progress</SelectItem>
                         <SelectItem value={TaskStatuses.PENDING}>Pending Review</SelectItem>
                         <SelectItem value={TaskStatuses.COMPLETED}>Complete</SelectItem>
+                        
+                        {/* Display custom statuses */}
+                        {customStatuses.length > 0 && <Separator className="my-1" />}
+                        {customStatuses.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   ) : (
@@ -499,7 +539,11 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                       task.status === TaskStatuses.NOT_STARTED ? "Not Started" :
                       task.status === TaskStatuses.IN_PROGRESS ? "In Progress" :
                       task.status === TaskStatuses.PENDING ? "Pending Review" :
-                      "Completed"
+                      task.status === TaskStatuses.COMPLETED ? "Completed" :
+                      // Handle custom statuses
+                      customStatuses.includes(task.status) ? 
+                        task.status.charAt(0).toUpperCase() + task.status.slice(1).replace(/_/g, ' ') : 
+                        task.status
                     }</div>
                   )}
                 </div>
