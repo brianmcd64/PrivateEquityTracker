@@ -134,6 +134,8 @@ export default function DealManagementPage() {
                   <TableRow>
                     <TableHead>Deal Name</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -143,6 +145,16 @@ export default function DealManagementPage() {
                     <TableRow key={deal.id}>
                       <TableCell className="font-medium">{deal.name}</TableCell>
                       <TableCell>{getStatusBadge(deal.status)}</TableCell>
+                      <TableCell>
+                        {deal.startDate 
+                          ? format(new Date(deal.startDate), "MMM d, yyyy") 
+                          : "Not set"}
+                      </TableCell>
+                      <TableCell>
+                        {deal.endDate 
+                          ? format(new Date(deal.endDate), "MMM d, yyyy") 
+                          : "Not set"}
+                      </TableCell>
                       <TableCell>
                         {deal.createdAt 
                           ? format(new Date(deal.createdAt), "MMM d, yyyy") 

@@ -26,12 +26,16 @@ export const deals = pgTable("deals", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   status: text("status").notNull(), // "active", "completed", "cancelled"
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const insertDealSchema = createInsertSchema(deals).pick({
   name: true,
   status: true,
+  startDate: true,
+  endDate: true,
 });
 
 // Tasks model
