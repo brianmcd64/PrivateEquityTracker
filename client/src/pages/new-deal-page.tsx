@@ -82,7 +82,14 @@ export default function NewDealPage() {
 
   // Form submission handler
   const onSubmit = (data: FormData) => {
-    createDealMutation.mutate(data);
+    // Convert Date objects to ISO strings for API submission
+    const formattedData = {
+      ...data,
+      startDate: data.startDate ? data.startDate.toISOString() : undefined,
+      endDate: data.endDate ? data.endDate.toISOString() : undefined
+    };
+    
+    createDealMutation.mutate(formattedData as any);
   };
 
   return (

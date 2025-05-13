@@ -31,7 +31,15 @@ export const deals = pgTable("deals", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertDealSchema = createInsertSchema(deals).pick({
+// Create the schema with automatic type conversion for dates
+export const insertDealSchema = createInsertSchema(deals, {
+  startDate: z.string().or(z.date()).optional().transform(val => 
+    val ? new Date(val) : undefined
+  ),
+  endDate: z.string().or(z.date()).optional().transform(val => 
+    val ? new Date(val) : undefined
+  ),
+}).pick({
   name: true,
   status: true,
   startDate: true,
