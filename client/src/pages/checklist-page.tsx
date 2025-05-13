@@ -235,25 +235,25 @@ export default function ChecklistPage() {
       title={
         <div className="flex justify-between items-center w-full">
           <span>Due Diligence Checklist</span>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-4">
             {/* View Type Toggle */}
-            <div className="bg-neutral-100 p-1 rounded-md flex">
+            <div className="bg-neutral-100 p-0.5 rounded-md flex">
               <Button 
                 variant={viewType === "list" ? "default" : "ghost"} 
                 size="sm" 
                 onClick={() => setViewType("list")}
-                className="rounded-sm"
+                className="rounded-sm px-3"
               >
-                <List className="h-4 w-4 mr-1" />
+                <List className="h-4 w-4 mr-2" />
                 List
               </Button>
               <Button 
                 variant={viewType === "kanban" ? "default" : "ghost"} 
                 size="sm" 
                 onClick={() => setViewType("kanban")}
-                className="rounded-sm"
+                className="rounded-sm px-3"
               >
-                <Kanban className="h-4 w-4 mr-1" />
+                <Kanban className="h-4 w-4 mr-2" />
                 Board
               </Button>
             </div>
