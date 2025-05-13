@@ -40,7 +40,7 @@ export default function NewDealPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      status: "active",
+      status: "open",
       startDate: undefined,
       endDate: undefined
     },
@@ -135,7 +135,7 @@ export default function NewDealPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="open">Open</SelectItem>
                           <SelectItem value="pending">Pending</SelectItem>
                           <SelectItem value="completed">Completed</SelectItem>
                           <SelectItem value="cancelled">Cancelled</SelectItem>

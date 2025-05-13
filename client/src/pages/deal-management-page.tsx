@@ -65,6 +65,19 @@ export default function DealManagementPage() {
   const { toast } = useToast();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [currentDeal, setCurrentDeal] = useState<Deal | null>(null);
+  const [activeDealId, setActiveDealId] = useState<string | null>(
+    localStorage.getItem("activeDealId")
+  );
+  
+  // Keep track of active deal ID changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setActiveDealId(localStorage.getItem("activeDealId"));
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
   
   // Fetch all deals
   const { data: deals = [], isLoading, error } = useQuery<Deal[]>({
@@ -193,8 +206,8 @@ export default function DealManagementPage() {
   // Function to determine the badge color based on status
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "active":
-        return <Badge variant="default">Active</Badge>;
+      case "open":
+        return <Badge variant="default">Open</Badge>;
       case "pending":
         return <Badge className="bg-amber-500 hover:bg-amber-500/90 text-white">Pending</Badge>;
       case "completed":
@@ -255,6 +268,7 @@ export default function DealManagementPage() {
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
                     <TableHead>Created</TableHead>
+                    <TableHead>Active</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -278,6 +292,23 @@ export default function DealManagementPage() {
                           ? format(new Date(deal.createdAt), "MMM d, yyyy") 
                           : "N/A"}
                       </TableCell>
+                      <TableCell>
+                        {/* Check if this is the active deal */}
+                        {localStorage.getItem("activeDealId") === deal.id.toString() ? (
+                          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
+                            Current
+                          </Badge>
+                        ) : (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleSetActive(deal.id)}
+                            className="text-xs"
+                          >
+                            Set Active
+                          </Button>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -287,18 +318,15 @@ export default function DealManagementPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleSetActive(deal.id)}>
-                              Set as Active Deal
-                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEditDeal(deal)}>
                               <Edit2 className="h-4 w-4 mr-2" />
                               Edit Deal
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              onClick={() => handleStatusChange(deal.id, "active")}
-                              disabled={deal.status === "active"}
+                              onClick={() => handleStatusChange(deal.id, "open")}
+                              disabled={deal.status === "open"}
                             >
-                              Mark as Active
+                              Mark as Open
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => handleStatusChange(deal.id, "pending")}
@@ -373,7 +401,7 @@ export default function DealManagementPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="open">Open</SelectItem>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
