@@ -818,10 +818,11 @@ export function TaskList({
                   />
                   <div className="ml-3 flex-1">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                      <Link href={`/task/${task.id}`}>
-                        <a className={`text-sm font-medium text-neutral-900 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''} hover:text-primary`}>
-                          {task.title}
-                        </a>
+                      <Link 
+                        href={`/task/${task.id}`}
+                        className={`text-sm font-medium text-neutral-900 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''} hover:text-primary`}
+                      >
+                        {task.title}
                       </Link>
                       <div className="flex items-center mt-1 sm:mt-0">
                         <span className="text-xs bg-neutral-100 text-neutral-700 rounded-full px-2 py-1 mr-2">

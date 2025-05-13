@@ -437,9 +437,9 @@ export default function ChecklistPage() {
       }
       subtitle={dealName}
     >
-      <div className="mb-6 flex justify-end">
+      <div className="mb-8 flex justify-end">
         {canAddTask && (
-          <Button variant="default" onClick={handleAddTask}>
+          <Button variant="default" onClick={handleAddTask} className="px-4 py-2">
             <PlusCircle className="h-4 w-4 mr-2" />
             Add Task
           </Button>
