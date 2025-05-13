@@ -236,7 +236,7 @@ export default function ChecklistPage() {
       subtitle={dealName}
     >
       {/* Title Bar with Right-Aligned Options */}
-      <div className="flex justify-end items-center gap-4 mb-4">
+      <div className="flex justify-end items-center gap-4 mt-6 mb-8">
         {/* View Mode Selector (only shown in list view) */}
         {viewType === "list" && (
           <Select value={viewMode} onValueChange={(value) => setViewMode(value as "phase" | "date" | "category" | "owner")}>
@@ -414,13 +414,13 @@ export default function ChecklistPage() {
       </div>
       
       {/* Centered View Type Toggle */}
-      <div className="flex justify-center mb-6 mt-2">
-        <div className="bg-neutral-100 p-0.5 rounded-lg flex">
+      <div className="flex justify-center mb-10">
+        <div className="bg-neutral-100 p-0.5 rounded-md flex">
           <Button 
             variant={viewType === "list" ? "default" : "ghost"} 
             size="sm" 
             onClick={() => setViewType("list")}
-            className="rounded-sm px-6"
+            className="rounded-sm px-5"
           >
             <List className="h-4 w-4 mr-2" />
             List
@@ -429,7 +429,7 @@ export default function ChecklistPage() {
             variant={viewType === "kanban" ? "default" : "ghost"} 
             size="sm" 
             onClick={() => setViewType("kanban")}
-            className="rounded-sm px-6"
+            className="rounded-sm px-5"
           >
             <Kanban className="h-4 w-4 mr-2" />
             Board
@@ -438,9 +438,9 @@ export default function ChecklistPage() {
       </div>
       
       {/* Add Task Button */}
-      <div className="mb-8 flex justify-end">
+      <div className="mb-4 flex justify-end">
         {canAddTask && (
-          <Button variant="default" onClick={handleAddTask} className="px-4 py-2">
+          <Button variant="primary" onClick={handleAddTask} className="px-4 py-2 bg-blue-500 hover:bg-blue-600">
             <PlusCircle className="h-4 w-4 mr-2" />
             Add Task
           </Button>
