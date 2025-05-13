@@ -50,8 +50,16 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
       setActiveDealId(parseInt(storedDealId));
     } else if (activeDeals.length > 0) {
       // Set first deal as active if nothing is stored
-      setActiveDealId(activeDeals[0].id);
-      localStorage.setItem("activeDealId", activeDeals[0].id.toString());
+      const firstDeal = activeDeals[0];
+      setActiveDealId(firstDeal.id);
+      localStorage.setItem("activeDealId", firstDeal.id.toString());
+      
+      // Also store the full deal object
+      localStorage.setItem("activeDeal", JSON.stringify({
+        id: firstDeal.id,
+        name: firstDeal.name,
+        status: firstDeal.status
+      }));
     }
   }, [activeDeals]);
 
@@ -64,9 +72,16 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
     { path: "/deals", label: "Deal Management", icon: <Briefcase className="h-5 w-5 mr-3 text-neutral-500" /> },
   ];
 
-  const handleDealClick = (dealId: number) => {
+  const handleDealClick = (dealId: number, deal: Deal) => {
     setActiveDealId(dealId);
     localStorage.setItem("activeDealId", dealId.toString());
+    
+    // Also store the full deal object for access from other components
+    localStorage.setItem("activeDeal", JSON.stringify({
+      id: deal.id,
+      name: deal.name,
+      status: deal.status
+    }));
   };
 
   return (
@@ -84,16 +99,15 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
           <ul className="space-y-1">
             {menuItems.map((item) => (
               <li key={item.path}>
-                <Link href={item.path}>
-                  <a
-                    className={cn(
-                      "flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-neutral-100 pl-4",
-                      location === item.path && "sidebar-menu-item active bg-blue-50 border-l-3 border-blue-500"
-                    )}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </a>
+                <Link 
+                  href={item.path}
+                  className={cn(
+                    "flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-neutral-100 pl-4",
+                    location === item.path && "sidebar-menu-item active bg-blue-50 border-l-3 border-blue-500"
+                  )}
+                >
+                  {item.icon}
+                  {item.label}
                 </Link>
               </li>
             ))}
@@ -126,7 +140,7 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
                   {activeDeals.map((deal) => (
                     <li key={deal.id}>
                       <button
-                        onClick={() => handleDealClick(deal.id)}
+                        onClick={() => handleDealClick(deal.id, deal)}
                         className={cn(
                           "w-full flex items-center px-3 py-2 text-sm font-medium rounded-md",
                           activeDealId === deal.id
@@ -142,17 +156,19 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
               )}
               
               <div className="mt-3 flex flex-col space-y-2">
-                <Link href="/deals">
-                  <a className="w-full text-sm text-neutral-600 font-medium flex items-center justify-center">
-                    Manage Deals
-                  </a>
+                <Link 
+                  href="/deals"
+                  className="w-full text-sm text-neutral-600 font-medium flex items-center justify-center"
+                >
+                  Manage Deals
                 </Link>
                 
                 {user?.role === "deal_lead" && (
-                  <Link href="/deals/new">
-                    <a className="w-full text-sm text-primary font-medium flex items-center justify-center">
-                      <span className="mr-1">+</span> Add New Deal
-                    </a>
+                  <Link 
+                    href="/deals/new"
+                    className="w-full text-sm text-primary font-medium flex items-center justify-center"
+                  >
+                    <span className="mr-1">+</span> Add New Deal
                   </Link>
                 )}
               </div>
