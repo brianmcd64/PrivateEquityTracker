@@ -277,11 +277,13 @@ export const UserRoles = {
 
 // Default Task Phases, Categories, and Statuses
 export const TaskPhases = {
-  LOI: "loi",
-  DOCUMENT: "document",
-  DEEPDIVE: "deepdive",
-  FINAL: "final",
-  INTEGRATION: "integration",
+  LOI_SIGNING: "loi_signing",
+  PLANNING_INITIAL: "planning_initial",
+  DOCUMENT_REVIEW: "document_review",
+  MID_PHASE_REVIEW: "mid_phase_review",
+  DEEP_DIVES: "deep_dives",
+  FINAL_RISK_REVIEW: "final_risk_review", 
+  DEAL_CLOSING: "deal_closing",
   POST_CLOSE: "post_close",
   CUSTOM: "custom",
 } as const;

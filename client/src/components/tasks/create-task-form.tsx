@@ -30,7 +30,7 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
   const { toast } = useToast();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [phase, setPhase] = useState<string>(TaskPhases.LOI);
+  const [phase, setPhase] = useState<string>(TaskPhases.LOI_SIGNING);
   const [category, setCategory] = useState<string>(TaskCategories.FINANCIAL);
   const [status, setStatus] = useState<string>(TaskStatuses.NOT_STARTED);
   const [priority, setPriority] = useState<number>(2);
@@ -79,7 +79,7 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
   const resetForm = () => {
     setTitle("");
     setDescription("");
-    setPhase(TaskPhases.LOI);
+    setPhase(TaskPhases.LOI_SIGNING);
     setCategory(TaskCategories.FINANCIAL);
     setStatus(TaskStatuses.NOT_STARTED);
     setPriority(2);
@@ -166,12 +166,14 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
                   <SelectValue placeholder="Select phase" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={TaskPhases.LOI}>LOI</SelectItem>
-                  <SelectItem value={TaskPhases.DOCUMENT}>Document Review</SelectItem>
-                  <SelectItem value={TaskPhases.DEEPDIVE}>Deep Dive</SelectItem>
-                  <SelectItem value={TaskPhases.FINAL}>Final Analysis</SelectItem>
-                  <SelectItem value={TaskPhases.INTEGRATION}>Integration</SelectItem>
-                  <SelectItem value={TaskPhases.POST_CLOSE}>Post-Close</SelectItem>
+                  <SelectItem value={TaskPhases.LOI_SIGNING}>LOI Signing & DD Kickoff</SelectItem>
+                  <SelectItem value={TaskPhases.PLANNING_INITIAL}>Planning & Initial Information Requests</SelectItem>
+                  <SelectItem value={TaskPhases.DOCUMENT_REVIEW}>Document Review & Tracker Updates</SelectItem>
+                  <SelectItem value={TaskPhases.MID_PHASE_REVIEW}>Mid-Phase Review</SelectItem>
+                  <SelectItem value={TaskPhases.DEEP_DIVES}>Deep Dives & Secondary Requests</SelectItem>
+                  <SelectItem value={TaskPhases.FINAL_RISK_REVIEW}>Final Risk Review & Negotiation</SelectItem>
+                  <SelectItem value={TaskPhases.DEAL_CLOSING}>Deal Closing Preparation</SelectItem>
+                  <SelectItem value={TaskPhases.POST_CLOSE}>Post-Close Integration Planning</SelectItem>
                 </SelectContent>
               </Select>
             </div>

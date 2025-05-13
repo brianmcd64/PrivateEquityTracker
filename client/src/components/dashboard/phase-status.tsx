@@ -29,10 +29,14 @@ export function PhaseStatus({ dealId }: PhaseStatusProps) {
   };
 
   const phases = [
-    { id: TaskPhases.LOI, name: "LOI Phase" },
-    { id: TaskPhases.DOCUMENT, name: "Document Review" },
-    { id: TaskPhases.DEEPDIVE, name: "Deep Dive" },
-    { id: TaskPhases.FINAL, name: "Final Analysis" }
+    { id: TaskPhases.LOI_SIGNING, name: "LOI Signing & DD Kickoff" },
+    { id: TaskPhases.PLANNING_INITIAL, name: "Planning & Initial Information Requests" },
+    { id: TaskPhases.DOCUMENT_REVIEW, name: "Document Review & Tracker Updates" },
+    { id: TaskPhases.MID_PHASE_REVIEW, name: "Mid-Phase Review" },
+    { id: TaskPhases.DEEP_DIVES, name: "Deep Dives & Secondary Requests" },
+    { id: TaskPhases.FINAL_RISK_REVIEW, name: "Final Risk Review & Negotiation" },
+    { id: TaskPhases.DEAL_CLOSING, name: "Deal Closing Preparation" },
+    { id: TaskPhases.POST_CLOSE, name: "Post-Close Integration Planning" }
   ];
 
   if (isLoading) {
