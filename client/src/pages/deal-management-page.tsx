@@ -193,6 +193,8 @@ export default function DealManagementPage() {
   const handleSetActive = (dealId: number) => {
     // Store the active deal ID in localStorage
     localStorage.setItem("activeDealId", dealId.toString());
+    // Update the state
+    setActiveDealId(dealId.toString());
     
     toast({
       title: "Active Deal Set",
@@ -294,7 +296,7 @@ export default function DealManagementPage() {
                       </TableCell>
                       <TableCell>
                         {/* Check if this is the active deal */}
-                        {localStorage.getItem("activeDealId") === deal.id.toString() ? (
+                        {activeDealId === deal.id.toString() ? (
                           <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
                             Current
                           </Badge>
