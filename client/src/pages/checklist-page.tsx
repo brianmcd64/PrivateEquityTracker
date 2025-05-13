@@ -14,48 +14,71 @@ import {
   Dialog, 
   DialogContent, 
   DialogDescription, 
+  DialogFooter, 
   DialogHeader, 
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter
+  DialogTitle, 
+  DialogTrigger 
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
+
+import { useLocalStorage } from "@/hooks/use-local-storage";
 
 export default function ChecklistPage() {
+  const [_, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [, navigate] = useLocation();
+  
+  // Deal state (from localStorage)
   const [dealId, setDealId] = useState<number | null>(null);
   const [dealName, setDealName] = useState<string>("");
   
-  // Load active deal from localStorage
+  // Custom fields state from localStorage
+  const [customPhases, setCustomPhases] = useLocalStorage<string[]>("customPhases", []);
+  const [customCategories, setCustomCategories] = useLocalStorage<string[]>("customCategories", []);
+  const [customStatuses, setCustomStatuses] = useLocalStorage<string[]>("customStatuses", []);
+  
+  // Create task dialog state
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+  const handleAddTask = () => setIsCreateTaskOpen(true);
+  const handleCloseCreateTask = () => setIsCreateTaskOpen(false);
+  
+  // Get active deal from localStorage on component mount
   useEffect(() => {
-    const storedDealId = localStorage.getItem("activeDealId");
-    if (storedDealId) {
-      setDealId(parseInt(storedDealId));
+    const storedDeal = localStorage.getItem("activeDeal");
+    if (storedDeal) {
+      try {
+        const parsedDeal = JSON.parse(storedDeal);
+        setDealId(parsedDeal.id);
+        setDealName(parsedDeal.name);
+      } catch (e) {
+        console.error("Failed to parse active deal from localStorage");
+      }
     } else {
-      // Redirect to deal management if no active deal
+      // If no active deal is set, redirect to deal management
       navigate("/deals");
     }
   }, [navigate]);
   
-  // Fetch deal info
+  // Fetch deal details to ensure they're up to date
   const { data: deal } = useQuery<Deal>({
-    queryKey: dealId ? [`/api/deals/${dealId}`] : ['skip-query'],
+    queryKey: dealId ? [`/api/deals/${dealId}`] : ['skip-deal-query'],
     enabled: !!dealId,
   });
   
-  // Update deal name when deal data is loaded
+  // Update state when deal data is loaded
   useEffect(() => {
     if (deal) {
       setDealName(deal.name);
@@ -78,123 +101,64 @@ export default function ChecklistPage() {
   const [customizeDialogOpen, setCustomizeDialogOpen] = useState(false);
   const [manageCustomFieldsOpen, setManageCustomFieldsOpen] = useState(false);
   
-  // Custom fields management with localStorage persistence
-  const [customPhases, setCustomPhases] = useState<string[]>(() => {
-    const saved = localStorage.getItem("customPhases");
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  const [customCategories, setCustomCategories] = useState<string[]>(() => {
-    const saved = localStorage.getItem("customCategories");
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  const [customStatuses, setCustomStatuses] = useState<string[]>(() => {
-    const saved = localStorage.getItem("customStatuses");
-    return saved ? JSON.parse(saved) : [];
-  });
-  
-  // Task creation state
-  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
-  
-  // New custom field
+  // New custom field handling
   const [newCustomFieldType, setNewCustomFieldType] = useState<"phase" | "category" | "status">("phase");
   const [newCustomFieldValue, setNewCustomFieldValue] = useState("");
   
-  const handleAddTask = () => {
-    setIsCreateTaskOpen(true);
-  };
-  
-  const handleCloseCreateTask = () => {
-    setIsCreateTaskOpen(false);
-  };
-  
   const handleAddCustomField = () => {
-    if (newCustomFieldValue.trim() === "") {
+    if (!newCustomFieldValue.trim()) {
       toast({
-        title: "Invalid value",
-        description: "Please enter a value for the custom field",
-        variant: "destructive"
+        title: "Error",
+        description: "Field name cannot be empty",
+        variant: "destructive",
       });
       return;
     }
     
-    const formattedValue = newCustomFieldValue.toLowerCase().replace(/\s+/g, '_');
+    // Check for duplicates
+    let existingFields: string[] = [];
     
-    switch (newCustomFieldType) {
-      case "phase":
-        if (!customPhases.includes(formattedValue)) {
-          const updatedPhases = [...customPhases, formattedValue];
-          setCustomPhases(updatedPhases);
-          localStorage.setItem("customPhases", JSON.stringify(updatedPhases));
-          toast({
-            title: "Custom Phase Added",
-            description: `Added new phase: ${newCustomFieldValue}`
-          });
-        } else {
-          toast({
-            title: "Duplicate value",
-            description: "This phase already exists",
-            variant: "destructive"
-          });
-        }
-        break;
-      case "category":
-        if (!customCategories.includes(formattedValue)) {
-          const updatedCategories = [...customCategories, formattedValue];
-          setCustomCategories(updatedCategories);
-          localStorage.setItem("customCategories", JSON.stringify(updatedCategories));
-          toast({
-            title: "Custom Category Added",
-            description: `Added new category: ${newCustomFieldValue}`
-          });
-        } else {
-          toast({
-            title: "Duplicate value",
-            description: "This category already exists",
-            variant: "destructive"
-          });
-        }
-        break;
-      case "status":
-        if (!customStatuses.includes(formattedValue)) {
-          const updatedStatuses = [...customStatuses, formattedValue];
-          setCustomStatuses(updatedStatuses);
-          localStorage.setItem("customStatuses", JSON.stringify(updatedStatuses));
-          toast({
-            title: "Custom Status Added",
-            description: `Added new status: ${newCustomFieldValue}`
-          });
-        } else {
-          toast({
-            title: "Duplicate value",
-            description: "This status already exists",
-            variant: "destructive"
-          });
-        }
-        break;
+    if (newCustomFieldType === "phase") {
+      existingFields = [...customPhases];
+    } else if (newCustomFieldType === "category") {
+      existingFields = [...customCategories];
+    } else if (newCustomFieldType === "status") {
+      existingFields = [...customStatuses];
+    }
+    
+    if (existingFields.includes(newCustomFieldValue)) {
+      toast({
+        title: "Error",
+        description: `A ${newCustomFieldType} with this name already exists`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Add the new field
+    if (newCustomFieldType === "phase") {
+      setCustomPhases([...customPhases, newCustomFieldValue]);
+    } else if (newCustomFieldType === "category") {
+      setCustomCategories([...customCategories, newCustomFieldValue]);
+    } else if (newCustomFieldType === "status") {
+      setCustomStatuses([...customStatuses, newCustomFieldValue]);
     }
     
     setNewCustomFieldValue("");
+    
+    toast({
+      title: "Custom Field Added",
+      description: `Added ${newCustomFieldType}: ${newCustomFieldValue}`
+    });
   };
   
   const removeCustomField = (type: "phase" | "category" | "status", value: string) => {
-    switch (type) {
-      case "phase":
-        const updatedPhases = customPhases.filter(p => p !== value);
-        setCustomPhases(updatedPhases);
-        localStorage.setItem("customPhases", JSON.stringify(updatedPhases));
-        break;
-      case "category":
-        const updatedCategories = customCategories.filter(c => c !== value);
-        setCustomCategories(updatedCategories);
-        localStorage.setItem("customCategories", JSON.stringify(updatedCategories));
-        break;
-      case "status":
-        const updatedStatuses = customStatuses.filter(s => s !== value);
-        setCustomStatuses(updatedStatuses);
-        localStorage.setItem("customStatuses", JSON.stringify(updatedStatuses));
-        break;
+    if (type === "phase") {
+      setCustomPhases(customPhases.filter(phase => phase !== value));
+    } else if (type === "category") {
+      setCustomCategories(customCategories.filter(category => category !== value));
+    } else if (type === "status") {
+      setCustomStatuses(customStatuses.filter(status => status !== value));
     }
     
     toast({
@@ -222,189 +186,212 @@ export default function ChecklistPage() {
 
   return (
     <Layout 
-      title="Due Diligence Checklist" 
+      title={
+        <div className="flex justify-between items-center w-full">
+          <span>Due Diligence Checklist</span>
+          <div className="flex items-center space-x-3">
+            {/* View Type Toggle */}
+            <div className="bg-neutral-100 p-1 rounded-md flex">
+              <Button 
+                variant={viewType === "list" ? "default" : "ghost"} 
+                size="sm" 
+                onClick={() => setViewType("list")}
+                className="rounded-sm"
+              >
+                <List className="h-4 w-4 mr-1" />
+                List
+              </Button>
+              <Button 
+                variant={viewType === "kanban" ? "default" : "ghost"} 
+                size="sm" 
+                onClick={() => setViewType("kanban")}
+                className="rounded-sm"
+              >
+                <Kanban className="h-4 w-4 mr-1" />
+                Board
+              </Button>
+            </div>
+            
+            {/* View Mode Selector (only shown in list view) */}
+            {viewType === "list" && (
+              <Select value={viewMode} onValueChange={(value) => setViewMode(value as "phase" | "date" | "category" | "owner")}>
+                <SelectTrigger className="w-[180px]">
+                  <div className="flex items-center">
+                    <ListFilter className="mr-2 h-4 w-4" />
+                    <span>View: {
+                      viewMode === "phase" ? "By Phase" : 
+                      viewMode === "category" ? "By Category" : 
+                      viewMode === "owner" ? "By Owner" : 
+                      "By Date"
+                    }</span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="phase">View by Phase</SelectItem>
+                  <SelectItem value="category">View by Category</SelectItem>
+                  <SelectItem value="owner">View by Owner</SelectItem>
+                  <SelectItem value="date">View by Date</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            
+            {/* Customize Button */}
+            {canAddTask && (
+              <Dialog open={customizeDialogOpen} onOpenChange={setCustomizeDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Settings2 className="h-4 w-4 mr-2" />
+                    Customize
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Customize Fields</DialogTitle>
+                    <DialogDescription>
+                      Add and manage custom fields for this due diligence checklist.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <Tabs defaultValue="phase">
+                      <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="phase">Phases</TabsTrigger>
+                        <TabsTrigger value="category">Categories</TabsTrigger>
+                        <TabsTrigger value="status">Statuses</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="phase" className="mt-4 space-y-4">
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Add New Phase</h4>
+                          <div className="flex space-x-2">
+                            <Input 
+                              id="add-phase" 
+                              placeholder="Enter phase name"
+                              value={newCustomFieldType === "phase" ? newCustomFieldValue : ""}
+                              onChange={(e) => {
+                                setNewCustomFieldType("phase");
+                                setNewCustomFieldValue(e.target.value);
+                              }}
+                            />
+                            <Button onClick={handleAddCustomField}>Add</Button>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Current Custom Phases</h4>
+                          {customPhases.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No custom phases added yet</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {customPhases.map(phase => (
+                                <div key={phase} className="flex justify-between items-center bg-neutral-50 p-2 rounded">
+                                  <span className="text-sm">{phase}</span>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => removeCustomField("phase", phase)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="category" className="mt-4 space-y-4">
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Add New Category</h4>
+                          <div className="flex space-x-2">
+                            <Input 
+                              id="add-category" 
+                              placeholder="Enter category name"
+                              value={newCustomFieldType === "category" ? newCustomFieldValue : ""}
+                              onChange={(e) => {
+                                setNewCustomFieldType("category");
+                                setNewCustomFieldValue(e.target.value);
+                              }}
+                            />
+                            <Button onClick={handleAddCustomField}>Add</Button>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Current Custom Categories</h4>
+                          {customCategories.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No custom categories added yet</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {customCategories.map(category => (
+                                <div key={category} className="flex justify-between items-center bg-neutral-50 p-2 rounded">
+                                  <span className="text-sm">{category}</span>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => removeCustomField("category", category)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="status" className="mt-4 space-y-4">
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Add New Status</h4>
+                          <div className="flex space-x-2">
+                            <Input 
+                              id="add-status" 
+                              placeholder="Enter status name"
+                              value={newCustomFieldType === "status" ? newCustomFieldValue : ""}
+                              onChange={(e) => {
+                                setNewCustomFieldType("status");
+                                setNewCustomFieldValue(e.target.value);
+                              }}
+                            />
+                            <Button onClick={handleAddCustomField}>Add</Button>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">Current Custom Statuses</h4>
+                          {customStatuses.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No custom statuses added yet</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {customStatuses.map(status => (
+                                <div key={status} className="flex justify-between items-center bg-neutral-50 p-2 rounded">
+                                  <span className="text-sm">{status}</span>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => removeCustomField("status", status)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button onClick={() => setCustomizeDialogOpen(false)}>
+                      Done
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        </div>
+      }
       subtitle={dealName}
     >
-      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col sm:flex-row gap-3 mb-4 md:mb-0">
-          {/* View Mode Selector */}
-          <Select value={viewMode} onValueChange={(value) => setViewMode(value as "phase" | "date" | "category" | "owner")}>
-            <SelectTrigger className="w-[180px]">
-              <div className="flex items-center">
-                <ListFilter className="mr-2 h-4 w-4" />
-                <span>View: {
-                  viewMode === "phase" ? "By Phase" : 
-                  viewMode === "category" ? "By Category" : 
-                  viewMode === "owner" ? "By Owner" : 
-                  "By Date"
-                }</span>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="phase">View by Phase</SelectItem>
-              <SelectItem value="category">View by Category</SelectItem>
-              <SelectItem value="owner">View by Owner</SelectItem>
-              <SelectItem value="date">View by Date</SelectItem>
-            </SelectContent>
-          </Select>
-          
-          {/* Customize Fields Button */}
-          {canAddTask && (
-            <Dialog open={customizeDialogOpen} onOpenChange={setCustomizeDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Customize Fields
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Customize Checklist Options</DialogTitle>
-                  <DialogDescription>
-                    Configure custom fields for your due diligence process
-                  </DialogDescription>
-                </DialogHeader>
-                
-                <div className="py-4">
-                  <Tabs defaultValue="phases">
-                    <TabsList className="grid grid-cols-3 mb-4">
-                      <TabsTrigger value="phases">Phases</TabsTrigger>
-                      <TabsTrigger value="categories">Categories</TabsTrigger>
-                      <TabsTrigger value="statuses">Statuses</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="phases" className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="add-phase">Add Custom Phase</Label>
-                        <div className="flex gap-2">
-                          <Input 
-                            id="add-phase" 
-                            placeholder="Enter phase name"
-                            value={newCustomFieldType === "phase" ? newCustomFieldValue : ""}
-                            onChange={(e) => {
-                              setNewCustomFieldType("phase");
-                              setNewCustomFieldValue(e.target.value);
-                            }}
-                          />
-                          <Button onClick={handleAddCustomField}>Add</Button>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Current Custom Phases</h4>
-                        {customPhases.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">No custom phases added yet</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {customPhases.map(phase => (
-                              <div key={phase} className="flex justify-between items-center bg-neutral-50 p-2 rounded">
-                                <span className="text-sm">{phase}</span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => removeCustomField("phase", phase)}
-                                >
-                                  Remove
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="categories" className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="add-category">Add Custom Category</Label>
-                        <div className="flex gap-2">
-                          <Input 
-                            id="add-category" 
-                            placeholder="Enter category name"
-                            value={newCustomFieldType === "category" ? newCustomFieldValue : ""}
-                            onChange={(e) => {
-                              setNewCustomFieldType("category");
-                              setNewCustomFieldValue(e.target.value);
-                            }}
-                          />
-                          <Button onClick={handleAddCustomField}>Add</Button>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Current Custom Categories</h4>
-                        {customCategories.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">No custom categories added yet</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {customCategories.map(category => (
-                              <div key={category} className="flex justify-between items-center bg-neutral-50 p-2 rounded">
-                                <span className="text-sm">{category}</span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => removeCustomField("category", category)}
-                                >
-                                  Remove
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="statuses" className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="add-status">Add Custom Status</Label>
-                        <div className="flex gap-2">
-                          <Input 
-                            id="add-status" 
-                            placeholder="Enter status name"
-                            value={newCustomFieldType === "status" ? newCustomFieldValue : ""}
-                            onChange={(e) => {
-                              setNewCustomFieldType("status");
-                              setNewCustomFieldValue(e.target.value);
-                            }}
-                          />
-                          <Button onClick={handleAddCustomField}>Add</Button>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Current Custom Statuses</h4>
-                        {customStatuses.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">No custom statuses added yet</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {customStatuses.map(status => (
-                              <div key={status} className="flex justify-between items-center bg-neutral-50 p-2 rounded">
-                                <span className="text-sm">{status}</span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => removeCustomField("status", status)}
-                                >
-                                  Remove
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </div>
-                
-                <DialogFooter>
-                  <Button onClick={() => setCustomizeDialogOpen(false)}>
-                    Done
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-        
+      <div className="mb-6 flex justify-end">
         {canAddTask && (
           <Button variant="default" onClick={handleAddTask}>
             <PlusCircle className="h-4 w-4 mr-2" />
@@ -413,13 +400,21 @@ export default function ChecklistPage() {
         )}
       </div>
       
-      <TaskList 
-        dealId={dealId!} 
-        viewMode={viewMode} 
-        customPhases={customPhases}
-        customCategories={customCategories}
-        customStatuses={customStatuses}
-      />
+      {/* Render either the TaskList or KanbanBoard based on view type */}
+      {viewType === "list" ? (
+        <TaskList 
+          dealId={dealId} 
+          viewMode={viewMode} 
+          customPhases={customPhases}
+          customCategories={customCategories}
+          customStatuses={customStatuses}
+        />
+      ) : (
+        <KanbanBoard 
+          tasks={tasks || []} 
+          onAddTask={canAddTask ? handleAddTask : undefined}
+        />
+      )}
       
       {/* Create Task Dialog */}
       {dealId && (
