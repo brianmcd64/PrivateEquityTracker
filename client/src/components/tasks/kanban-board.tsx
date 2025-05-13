@@ -150,10 +150,8 @@ export function KanbanBoard({ tasks, onAddTask }: KanbanBoardProps) {
                   {tasksByStatus[status].map(task => (
                     <Card key={task.id} className={`shadow-sm ${task.status === TaskStatuses.COMPLETED ? 'opacity-70' : ''}`}>
                       <CardHeader className="p-3 pb-0">
-                        <Link href={`/task/${task.id}`}>
-                          <a className={`text-sm font-medium text-neutral-900 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''} hover:text-primary`}>
-                            {task.title}
-                          </a>
+                        <Link href={`/task/${task.id}`} className={`text-sm font-medium text-neutral-900 ${task.status === TaskStatuses.COMPLETED ? 'line-through' : ''} hover:text-primary`}>
+                          {task.title}
                         </Link>
                       </CardHeader>
                       <CardContent className="p-3 space-y-3">
