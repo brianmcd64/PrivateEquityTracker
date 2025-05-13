@@ -232,211 +232,212 @@ export default function ChecklistPage() {
 
   return (
     <Layout 
-      title={
-        <div className="flex justify-between items-center w-full">
-          <span>Due Diligence Checklist</span>
-          <div className="flex items-center gap-4">
-            {/* View Type Toggle */}
-            <div className="bg-neutral-100 p-0.5 rounded-md flex">
-              <Button 
-                variant={viewType === "list" ? "default" : "ghost"} 
-                size="sm" 
-                onClick={() => setViewType("list")}
-                className="rounded-sm px-3"
-              >
-                <List className="h-4 w-4 mr-2" />
-                List
-              </Button>
-              <Button 
-                variant={viewType === "kanban" ? "default" : "ghost"} 
-                size="sm" 
-                onClick={() => setViewType("kanban")}
-                className="rounded-sm px-3"
-              >
-                <Kanban className="h-4 w-4 mr-2" />
-                Board
-              </Button>
-            </div>
-            
-            {/* View Mode Selector (only shown in list view) */}
-            {viewType === "list" && (
-              <Select value={viewMode} onValueChange={(value) => setViewMode(value as "phase" | "date" | "category" | "owner")}>
-                <SelectTrigger className="w-[180px]">
-                  <div className="flex items-center">
-                    <ListFilter className="mr-2 h-4 w-4" />
-                    <span>View: {
-                      viewMode === "phase" ? "By Phase" : 
-                      viewMode === "category" ? "By Category" : 
-                      viewMode === "owner" ? "By Owner" : 
-                      "By Date"
-                    }</span>
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="phase">View by Phase</SelectItem>
-                  <SelectItem value="category">View by Category</SelectItem>
-                  <SelectItem value="owner">View by Owner</SelectItem>
-                  <SelectItem value="date">View by Date</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-            
-            {/* Customize Button */}
-            {canAddTask && (
-              <Dialog open={customizeDialogOpen} onOpenChange={setCustomizeDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Settings2 className="h-4 w-4 mr-2" />
-                    Customize
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>Customize Fields</DialogTitle>
-                    <DialogDescription>
-                      Add and manage custom fields for this due diligence checklist.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4">
-                    <Tabs defaultValue="phase">
-                      <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="phase">Phases</TabsTrigger>
-                        <TabsTrigger value="category">Categories</TabsTrigger>
-                        <TabsTrigger value="status">Statuses</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="phase" className="mt-4 space-y-4">
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Add New Phase</h4>
-                          <div className="flex space-x-2">
-                            <Input 
-                              id="add-phase" 
-                              placeholder="Enter phase name"
-                              value={newCustomFieldType === "phase" ? newCustomFieldValue : ""}
-                              onChange={(e) => {
-                                setNewCustomFieldType("phase");
-                                setNewCustomFieldValue(e.target.value);
-                              }}
-                            />
-                            <Button onClick={handleAddCustomField}>Add</Button>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Current Custom Phases</h4>
-                          {customPhases.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No custom phases added yet</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {customPhases.map(phase => (
-                                <div key={phase} className="flex justify-between items-center bg-neutral-50 p-2 rounded">
-                                  <span className="text-sm">{phase}</span>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    onClick={() => removeCustomField("phase", phase)}
-                                  >
-                                    Remove
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </TabsContent>
-                      <TabsContent value="category" className="mt-4 space-y-4">
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Add New Category</h4>
-                          <div className="flex space-x-2">
-                            <Input 
-                              id="add-category" 
-                              placeholder="Enter category name"
-                              value={newCustomFieldType === "category" ? newCustomFieldValue : ""}
-                              onChange={(e) => {
-                                setNewCustomFieldType("category");
-                                setNewCustomFieldValue(e.target.value);
-                              }}
-                            />
-                            <Button onClick={handleAddCustomField}>Add</Button>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Current Custom Categories</h4>
-                          {customCategories.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No custom categories added yet</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {customCategories.map(category => (
-                                <div key={category} className="flex justify-between items-center bg-neutral-50 p-2 rounded">
-                                  <span className="text-sm">{category}</span>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    onClick={() => removeCustomField("category", category)}
-                                  >
-                                    Remove
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </TabsContent>
-                      <TabsContent value="status" className="mt-4 space-y-4">
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Add New Status</h4>
-                          <div className="flex space-x-2">
-                            <Input 
-                              id="add-status" 
-                              placeholder="Enter status name"
-                              value={newCustomFieldType === "status" ? newCustomFieldValue : ""}
-                              onChange={(e) => {
-                                setNewCustomFieldType("status");
-                                setNewCustomFieldValue(e.target.value);
-                              }}
-                            />
-                            <Button onClick={handleAddCustomField}>Add</Button>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Current Custom Statuses</h4>
-                          {customStatuses.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No custom statuses added yet</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {customStatuses.map(status => (
-                                <div key={status} className="flex justify-between items-center bg-neutral-50 p-2 rounded">
-                                  <span className="text-sm">{status}</span>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    onClick={() => removeCustomField("status", status)}
-                                  >
-                                    Remove
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </div>
-                  
-                  <DialogFooter>
-                    <Button onClick={() => setCustomizeDialogOpen(false)}>
-                      Done
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-        </div>
-      }
+      title="Due Diligence Checklist" 
       subtitle={dealName}
     >
+      {/* Title Row with Right-Aligned Options */}
+      <div className="flex justify-end items-center gap-4 mb-2">
+        {/* View Mode Selector (only shown in list view) */}
+        {viewType === "list" && (
+          <Select value={viewMode} onValueChange={(value) => setViewMode(value as "phase" | "date" | "category" | "owner")}>
+            <SelectTrigger className="w-[180px]">
+              <div className="flex items-center">
+                <ListFilter className="mr-2 h-4 w-4" />
+                <span>View: {
+                  viewMode === "phase" ? "By Phase" : 
+                  viewMode === "category" ? "By Category" : 
+                  viewMode === "owner" ? "By Owner" : 
+                  "By Date"
+                }</span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="phase">View by Phase</SelectItem>
+              <SelectItem value="category">View by Category</SelectItem>
+              <SelectItem value="owner">View by Owner</SelectItem>
+              <SelectItem value="date">View by Date</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+        
+        {/* Customize Button */}
+        {canAddTask && (
+          <Dialog open={customizeDialogOpen} onOpenChange={setCustomizeDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings2 className="h-4 w-4 mr-2" />
+                Customize
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Customize Fields</DialogTitle>
+                <DialogDescription>
+                  Add and manage custom fields for this due diligence checklist.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <Tabs defaultValue="phase">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="phase">Phases</TabsTrigger>
+                    <TabsTrigger value="category">Categories</TabsTrigger>
+                    <TabsTrigger value="status">Statuses</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="phase" className="mt-4 space-y-4">
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Add New Phase</h4>
+                      <div className="flex space-x-2">
+                        <Input 
+                          id="add-phase" 
+                          placeholder="Enter phase name"
+                          value={newCustomFieldType === "phase" ? newCustomFieldValue : ""}
+                          onChange={(e) => {
+                            setNewCustomFieldType("phase");
+                            setNewCustomFieldValue(e.target.value);
+                          }}
+                        />
+                        <Button onClick={handleAddCustomField}>Add</Button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Current Custom Phases</h4>
+                      {customPhases.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No custom phases added yet</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {customPhases.map(phase => (
+                            <div key={phase} className="flex justify-between items-center bg-neutral-50 p-2 rounded">
+                              <span className="text-sm">{phase}</span>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => removeCustomField("phase", phase)}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="category" className="mt-4 space-y-4">
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Add New Category</h4>
+                      <div className="flex space-x-2">
+                        <Input 
+                          id="add-category" 
+                          placeholder="Enter category name"
+                          value={newCustomFieldType === "category" ? newCustomFieldValue : ""}
+                          onChange={(e) => {
+                            setNewCustomFieldType("category");
+                            setNewCustomFieldValue(e.target.value);
+                          }}
+                        />
+                        <Button onClick={handleAddCustomField}>Add</Button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Current Custom Categories</h4>
+                      {customCategories.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No custom categories added yet</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {customCategories.map(category => (
+                            <div key={category} className="flex justify-between items-center bg-neutral-50 p-2 rounded">
+                              <span className="text-sm">{category}</span>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => removeCustomField("category", category)}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="status" className="mt-4 space-y-4">
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Add New Status</h4>
+                      <div className="flex space-x-2">
+                        <Input 
+                          id="add-status" 
+                          placeholder="Enter status name"
+                          value={newCustomFieldType === "status" ? newCustomFieldValue : ""}
+                          onChange={(e) => {
+                            setNewCustomFieldType("status");
+                            setNewCustomFieldValue(e.target.value);
+                          }}
+                        />
+                        <Button onClick={handleAddCustomField}>Add</Button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Current Custom Statuses</h4>
+                      {customStatuses.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No custom statuses added yet</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {customStatuses.map(status => (
+                            <div key={status} className="flex justify-between items-center bg-neutral-50 p-2 rounded">
+                              <span className="text-sm">{status}</span>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => removeCustomField("status", status)}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+              
+              <DialogFooter>
+                <Button onClick={() => setCustomizeDialogOpen(false)}>
+                  Done
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+      
+      {/* Centered View Type Toggle */}
+      <div className="flex justify-center mb-6">
+        <div className="bg-neutral-100 p-0.5 rounded-md flex">
+          <Button 
+            variant={viewType === "list" ? "default" : "ghost"} 
+            size="sm" 
+            onClick={() => setViewType("list")}
+            className="rounded-sm px-5"
+          >
+            <List className="h-4 w-4 mr-2" />
+            List
+          </Button>
+          <Button 
+            variant={viewType === "kanban" ? "default" : "ghost"} 
+            size="sm" 
+            onClick={() => setViewType("kanban")}
+            className="rounded-sm px-5"
+          >
+            <Kanban className="h-4 w-4 mr-2" />
+            Board
+          </Button>
+        </div>
+      </div>
+      
+      {/* Add Task Button */}
       <div className="mb-8 flex justify-end">
         {canAddTask && (
           <Button variant="default" onClick={handleAddTask} className="px-4 py-2">
