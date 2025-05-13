@@ -6,7 +6,7 @@ import { TaskList } from "@/components/tasks/task-list";
 import { KanbanBoard } from "@/components/tasks/kanban-board";
 import { CreateTaskForm } from "@/components/tasks/create-task-form";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Settings2, ListFilter, Kanban, List } from "lucide-react";
+import { PlusCircle, Settings2, ListFilter, Kanban, List, ChevronRight, Briefcase } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Deal, Task } from "@shared/schema";
@@ -65,12 +65,11 @@ export default function ChecklistPage() {
         setDealName(parsedDeal.name);
       } catch (e) {
         console.error("Failed to parse active deal from localStorage");
+        // Don't redirect, let the component handle the null dealId case
       }
-    } else {
-      // If no active deal is set, redirect to deal management
-      navigate("/deals");
     }
-  }, [navigate]);
+    // Don't redirect to deals page anymore, we'll show a message instead
+  }, []);
   
   // Fetch deal details to ensure they're up to date
   const { data: deal } = useQuery<Deal>({
@@ -170,15 +169,62 @@ export default function ChecklistPage() {
   // Only deal leads and functional leads can add tasks or customize fields
   const canAddTask = user && (user.role === "deal_lead" || user.role === "functional_lead");
   
-  // If no deal ID yet, show loading state
+  // Fetch all deals for selection if no deal is active
+  const { data: allDeals = [] } = useQuery<Deal[]>({
+    queryKey: ["/api/deals"],
+  });
+
+  // Filter for active deals only
+  const activeDeals = allDeals.filter(deal => deal.status === "active");
+  
+  // If no deal ID yet, show deal selection interface
   if (!dealId) {
     return (
       <Layout 
-        title="Loading Checklist..." 
-        subtitle="Please wait"
+        title="Due Diligence Checklist" 
+        subtitle="Please select a deal to view its checklist"
       >
-        <div className="flex items-center justify-center h-64">
-          <p className="text-neutral-500">Loading deal information...</p>
+        <div className="flex flex-col items-center justify-center h-64 max-w-md mx-auto">
+          <p className="text-neutral-500 mb-4">
+            No active deal selected. Please select a deal from the list below:
+          </p>
+          
+          {activeDeals.length === 0 ? (
+            <div className="text-center">
+              <p className="text-neutral-500 mb-2">No active deals available.</p>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/deals")}
+              >
+                <Briefcase className="h-4 w-4 mr-2" />
+                Go to Deal Management
+              </Button>
+            </div>
+          ) : (
+            <div className="w-full space-y-2 bg-white p-4 rounded-lg border border-neutral-200">
+              {activeDeals.map(deal => (
+                <button
+                  key={deal.id}
+                  onClick={() => {
+                    // Set active deal
+                    setDealId(deal.id);
+                    setDealName(deal.name);
+                    
+                    // Save to localStorage
+                    localStorage.setItem("activeDeal", JSON.stringify({
+                      id: deal.id,
+                      name: deal.name,
+                      status: deal.status
+                    }));
+                  }}
+                  className="w-full text-left p-3 rounded-md hover:bg-neutral-50 border border-neutral-200 flex justify-between items-center"
+                >
+                  <span className="font-medium">{deal.name}</span>
+                  <ChevronRight className="h-4 w-4 text-neutral-400" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </Layout>
     );
