@@ -31,7 +31,7 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [phase, setPhase] = useState<string>(TaskPhases.LOI_SIGNING);
-  const [category, setCategory] = useState<string>(TaskCategories.FINANCIAL);
+  const [category, setCategory] = useState<string>(TaskCategories.OPERATING_TEAM);
   const [status, setStatus] = useState<string>(TaskStatuses.NOT_STARTED);
   const [priority, setPriority] = useState<number>(2);
   const [assignedTo, setAssignedTo] = useState<number | undefined>(undefined);
@@ -80,7 +80,7 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
     setTitle("");
     setDescription("");
     setPhase(TaskPhases.LOI_SIGNING);
-    setCategory(TaskCategories.FINANCIAL);
+    setCategory(TaskCategories.OPERATING_TEAM);
     setStatus(TaskStatuses.NOT_STARTED);
     setPriority(2);
     setAssignedTo(undefined);
@@ -186,14 +186,12 @@ export function CreateTaskForm({ isOpen, onClose, dealId }: CreateTaskFormProps)
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={TaskCategories.FINANCIAL}>Financial</SelectItem>
+                  <SelectItem value={TaskCategories.OPERATING_TEAM}>Operating Team</SelectItem>
+                  <SelectItem value={TaskCategories.SELLER_BROKER}>Seller / Broker</SelectItem>
+                  <SelectItem value={TaskCategories.IR_BANK}>IR / Bank</SelectItem>
                   <SelectItem value={TaskCategories.LEGAL}>Legal</SelectItem>
-                  <SelectItem value={TaskCategories.OPERATIONS}>Operations</SelectItem>
-                  <SelectItem value={TaskCategories.HR}>Human Resources</SelectItem>
-                  <SelectItem value={TaskCategories.TECH}>Technology</SelectItem>
-                  <SelectItem value={TaskCategories.TAX}>Tax</SelectItem>
-                  <SelectItem value={TaskCategories.STRATEGY}>Strategy</SelectItem>
-                  <SelectItem value={TaskCategories.COMPLIANCE}>Compliance</SelectItem>
+                  <SelectItem value={TaskCategories.FINANCIAL}>Financial</SelectItem>
+                  <SelectItem value={TaskCategories.INVESTMENT_COMMITTEE}>Investment Committee</SelectItem>
                 </SelectContent>
               </Select>
             </div>

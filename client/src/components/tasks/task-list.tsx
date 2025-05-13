@@ -389,14 +389,12 @@ export function TaskList({
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
               <option value="">All Categories</option>
-              <option value={TaskCategories.FINANCIAL}>Financial</option>
+              <option value={TaskCategories.OPERATING_TEAM}>Operating Team</option>
+              <option value={TaskCategories.SELLER_BROKER}>Seller / Broker</option>
+              <option value={TaskCategories.IR_BANK}>IR / Bank</option>
               <option value={TaskCategories.LEGAL}>Legal</option>
-              <option value={TaskCategories.OPERATIONS}>Operations</option>
-              <option value={TaskCategories.HR}>Human Resources</option>
-              <option value={TaskCategories.TECH}>Technology</option>
-              <option value={TaskCategories.TAX}>Tax</option>
-              <option value={TaskCategories.STRATEGY}>Strategy</option>
-              <option value={TaskCategories.COMPLIANCE}>Compliance</option>
+              <option value={TaskCategories.FINANCIAL}>Financial</option>
+              <option value={TaskCategories.INVESTMENT_COMMITTEE}>Investment Committee</option>
               {customCategories.map(category => (
                 <option key={category} value={category}>{category.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}</option>
               ))}

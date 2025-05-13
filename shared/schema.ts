@@ -289,14 +289,12 @@ export const TaskPhases = {
 } as const;
 
 export const TaskCategories = {
-  FINANCIAL: "financial",
+  OPERATING_TEAM: "operating_team",
+  SELLER_BROKER: "seller_broker",
+  IR_BANK: "ir_bank",
   LEGAL: "legal",
-  OPERATIONS: "operations",
-  HR: "hr",
-  TECH: "tech",
-  TAX: "tax",
-  STRATEGY: "strategy",
-  COMPLIANCE: "compliance",
+  FINANCIAL: "financial",
+  INVESTMENT_COMMITTEE: "investment_committee",
   CUSTOM: "custom",
 } as const;
 
