@@ -3,12 +3,13 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Layout } from "@/components/layout";
 import { TaskList } from "@/components/tasks/task-list";
+import { KanbanBoard } from "@/components/tasks/kanban-board";
 import { CreateTaskForm } from "@/components/tasks/create-task-form";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Settings2, ListFilter } from "lucide-react";
+import { PlusCircle, Settings2, ListFilter, Kanban, List } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Deal } from "@shared/schema";
+import { Deal, Task } from "@shared/schema";
 import { 
   Dialog, 
   DialogContent, 
@@ -61,8 +62,17 @@ export default function ChecklistPage() {
     }
   }, [deal]);
   
-  // View mode state
+  // View mode state for list organization
   const [viewMode, setViewMode] = useState<"phase" | "date" | "category" | "owner">("phase");
+  
+  // View type toggle (list vs kanban)
+  const [viewType, setViewType] = useState<"list" | "kanban">("list");
+  
+  // Fetch all tasks for the deal (needed for kanban view)
+  const { data: tasks } = useQuery<Task[]>({
+    queryKey: dealId ? [`/api/deals/${dealId}/tasks`] : ['skip-tasks-query'],
+    enabled: !!dealId,
+  });
 
   // Customize dialogs
   const [customizeDialogOpen, setCustomizeDialogOpen] = useState(false);
