@@ -136,6 +136,7 @@ export default function NewDealPage() {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
                           <SelectItem value="completed">Completed</SelectItem>
                           <SelectItem value="cancelled">Cancelled</SelectItem>
                         </SelectContent>

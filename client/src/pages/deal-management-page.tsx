@@ -195,6 +195,8 @@ export default function DealManagementPage() {
     switch (status) {
       case "active":
         return <Badge variant="default">Active</Badge>;
+      case "pending":
+        return <Badge className="bg-amber-500 hover:bg-amber-500/90 text-white">Pending</Badge>;
       case "completed":
         return <Badge variant="secondary">Completed</Badge>;
       case "cancelled":
@@ -299,6 +301,12 @@ export default function DealManagementPage() {
                               Mark as Active
                             </DropdownMenuItem>
                             <DropdownMenuItem 
+                              onClick={() => handleStatusChange(deal.id, "pending")}
+                              disabled={deal.status === "pending"}
+                            >
+                              Mark as Pending
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
                               onClick={() => handleStatusChange(deal.id, "completed")}
                               disabled={deal.status === "completed"}
                             >
@@ -366,6 +374,7 @@ export default function DealManagementPage() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
                       </SelectContent>
