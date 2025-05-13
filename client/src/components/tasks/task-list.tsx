@@ -215,15 +215,19 @@ export function TaskList({
   
   const getPhaseColor = (phase: string) => {
     switch (phase) {
-      case TaskPhases.LOI:
+      case TaskPhases.LOI_SIGNING:
         return "bg-accent";
-      case TaskPhases.DOCUMENT:
+      case TaskPhases.PLANNING_INITIAL:
+        return "bg-cyan-500";
+      case TaskPhases.DOCUMENT_REVIEW:
         return "bg-warning";
-      case TaskPhases.DEEPDIVE:
+      case TaskPhases.MID_PHASE_REVIEW:
+        return "bg-indigo-500";
+      case TaskPhases.DEEP_DIVES:
         return "bg-success";
-      case TaskPhases.FINAL:
+      case TaskPhases.FINAL_RISK_REVIEW:
         return "bg-danger";
-      case TaskPhases.INTEGRATION:
+      case TaskPhases.DEAL_CLOSING:
         return "bg-purple-500";
       case TaskPhases.POST_CLOSE:
         return "bg-blue-500";
@@ -237,21 +241,25 @@ export function TaskList({
   
   const getPhaseTitle = (phase: string) => {
     switch (phase) {
-      case TaskPhases.LOI:
-        return "LOI Phase";
-      case TaskPhases.DOCUMENT:
-        return "Document Review Phase";
-      case TaskPhases.DEEPDIVE:
-        return "Deep Dive Phase";
-      case TaskPhases.FINAL:
-        return "Final Analysis Phase";
-      case TaskPhases.INTEGRATION:
-        return "Integration Phase";
+      case TaskPhases.LOI_SIGNING:
+        return "LOI Signing & DD Kickoff";
+      case TaskPhases.PLANNING_INITIAL:
+        return "Planning & Initial Information Requests";
+      case TaskPhases.DOCUMENT_REVIEW:
+        return "Document Review & Tracker Updates";
+      case TaskPhases.MID_PHASE_REVIEW:
+        return "Mid-Phase Review";
+      case TaskPhases.DEEP_DIVES:
+        return "Deep Dives & Secondary Requests";
+      case TaskPhases.FINAL_RISK_REVIEW:
+        return "Final Risk Review & Negotiation";
+      case TaskPhases.DEAL_CLOSING:
+        return "Deal Closing Preparation";
       case TaskPhases.POST_CLOSE:
-        return "Post-Close Phase";
+        return "Post-Close Integration Planning";
       default:
         // For custom phases, format the phase name for display
-        return phase.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase()) + " Phase";
+        return phase.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
     }
   };
   
@@ -358,12 +366,14 @@ export function TaskList({
               onChange={(e) => setPhaseFilter(e.target.value)}
             >
               <option value="">All Phases</option>
-              <option value={TaskPhases.LOI}>LOI</option>
-              <option value={TaskPhases.DOCUMENT}>Document Review</option>
-              <option value={TaskPhases.DEEPDIVE}>Deep Dive</option>
-              <option value={TaskPhases.FINAL}>Final Analysis</option>
-              <option value={TaskPhases.INTEGRATION}>Integration</option>
-              <option value={TaskPhases.POST_CLOSE}>Post-Close</option>
+              <option value={TaskPhases.LOI_SIGNING}>LOI Signing & DD Kickoff</option>
+              <option value={TaskPhases.PLANNING_INITIAL}>Planning & Initial Information Requests</option>
+              <option value={TaskPhases.DOCUMENT_REVIEW}>Document Review & Tracker Updates</option>
+              <option value={TaskPhases.MID_PHASE_REVIEW}>Mid-Phase Review</option>
+              <option value={TaskPhases.DEEP_DIVES}>Deep Dives & Secondary Requests</option>
+              <option value={TaskPhases.FINAL_RISK_REVIEW}>Final Risk Review & Negotiation</option>
+              <option value={TaskPhases.DEAL_CLOSING}>Deal Closing Preparation</option>
+              <option value={TaskPhases.POST_CLOSE}>Post-Close Integration Planning</option>
               {customPhases.map(phase => (
                 <option key={phase} value={phase}>{phase.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}</option>
               ))}
