@@ -235,8 +235,8 @@ export default function ChecklistPage() {
       title="Due Diligence Checklist" 
       subtitle={dealName}
     >
-      {/* Title Row with Right-Aligned Options */}
-      <div className="flex justify-end items-center gap-4 mb-2">
+      {/* Title Bar with Right-Aligned Options */}
+      <div className="flex justify-end items-center gap-4 mb-4">
         {/* View Mode Selector (only shown in list view) */}
         {viewType === "list" && (
           <Select value={viewMode} onValueChange={(value) => setViewMode(value as "phase" | "date" | "category" | "owner")}>
@@ -414,13 +414,13 @@ export default function ChecklistPage() {
       </div>
       
       {/* Centered View Type Toggle */}
-      <div className="flex justify-center mb-6">
-        <div className="bg-neutral-100 p-0.5 rounded-md flex">
+      <div className="flex justify-center mb-6 mt-2">
+        <div className="bg-neutral-100 p-0.5 rounded-lg flex">
           <Button 
             variant={viewType === "list" ? "default" : "ghost"} 
             size="sm" 
             onClick={() => setViewType("list")}
-            className="rounded-sm px-5"
+            className="rounded-sm px-6"
           >
             <List className="h-4 w-4 mr-2" />
             List
@@ -429,7 +429,7 @@ export default function ChecklistPage() {
             variant={viewType === "kanban" ? "default" : "ghost"} 
             size="sm" 
             onClick={() => setViewType("kanban")}
-            className="rounded-sm px-5"
+            className="rounded-sm px-6"
           >
             <Kanban className="h-4 w-4 mr-2" />
             Board
