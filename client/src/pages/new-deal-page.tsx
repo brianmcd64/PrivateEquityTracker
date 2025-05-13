@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,12 +13,19 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { CalendarIcon } from "lucide-react";
+import { format, addDays } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 // Extend the schema with validation
 const formSchema = insertDealSchema.extend({
   name: z.string().min(3, {
     message: "Deal name must be at least 3 characters.",
   }),
+  startDate: z.date().optional(),
+  endDate: z.date().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -34,9 +41,22 @@ export default function NewDealPage() {
     defaultValues: {
       name: "",
       status: "active",
+      startDate: undefined,
+      endDate: undefined
     },
   });
 
+  // Calculate end date when start date changes (90 days later)
+  const startDate = form.watch("startDate");
+  
+  useEffect(() => {
+    if (startDate) {
+      // Calculate end date as 90 days from start date
+      const calculatedEndDate = addDays(new Date(startDate), 90);
+      form.setValue("endDate", calculatedEndDate);
+    }
+  }, [startDate, form]);
+  
   // Define mutation
   const createDealMutation = useMutation({
     mutationFn: async (data: InsertDeal) => {
@@ -49,7 +69,7 @@ export default function NewDealPage() {
         description: "Deal created successfully.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
-      navigate("/dashboard");
+      navigate("/deals");
     },
     onError: (error: Error) => {
       toast({
@@ -113,6 +133,73 @@ export default function NewDealPage() {
                           <SelectItem value="cancelled">Cancelled</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Start Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Select date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>End Date (90 days from Start Date)</FormLabel>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full pl-3 text-left font-normal bg-neutral-50",
+                            !field.value && "text-muted-foreground"
+                          )}
+                          disabled={true}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Automatically calculated</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
