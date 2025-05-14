@@ -67,7 +67,10 @@ import { Plus, Edit, Trash2 } from "lucide-react";
 const templateFormSchema = insertTaskTemplateSchema.extend({
   name: z.string().min(3, { message: "Template name must be at least 3 characters" }),
   description: z.string().optional(),
-  isDefault: z.boolean().default(false)
+  isDefault: z.preprocess(
+    (val) => val === true || val === 'true',
+    z.boolean().default(false)
+  )
 });
 
 // Form schema for template item creation
@@ -629,6 +632,7 @@ export default function TemplatesPage() {
               )}
 
               <Dialog open={isCreateItemOpen} onOpenChange={setIsCreateItemOpen}>
+                  <DialogTrigger className="hidden">Add Task</DialogTrigger>
                   <DialogContent className="sm:max-w-[550px]">
                     <DialogHeader>
                       <DialogTitle>
