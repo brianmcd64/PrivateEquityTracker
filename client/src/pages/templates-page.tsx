@@ -106,6 +106,17 @@ export default function TemplatesPage() {
     queryKey: ["/api/task-templates"],
   });
 
+  // Use this effect to force template item refreshes when template selection changes
+  useEffect(() => {
+    if (selectedTemplate) {
+      console.log(`Template selected, refreshing items for template ID: ${selectedTemplate.id}`);
+      // Force refresh items when template selection changes
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/task-templates", selectedTemplate.id, "items"] 
+      });
+    }
+  }, [selectedTemplate, queryClient]);
+
   // Fetch template items for selected template
   const {
     data: templateItems,
@@ -119,14 +130,36 @@ export default function TemplatesPage() {
     queryFn: async () => {
       if (!selectedTemplate) return [] as TaskTemplateItem[];
       console.log(`Fetching items for template ID: ${selectedTemplate.id}`);
-      const response = await apiRequest("GET", `/api/task-templates/${selectedTemplate.id}/items`);
-      console.log("Items response:", response);
-      if (response && Array.isArray(response)) {
-        return response as TaskTemplateItem[];
+      
+      try {
+        // Using fetch directly for debugging visibility
+        const response = await fetch(`/api/task-templates/${selectedTemplate.id}/items`, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Error fetching template items: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("Items fetched successfully:", data);
+        
+        if (Array.isArray(data)) {
+          return data as TaskTemplateItem[];
+        } else {
+          console.error("Response is not an array:", data);
+          return [] as TaskTemplateItem[];
+        }
+      } catch (error) {
+        console.error("Error fetching template items:", error);
+        return [] as TaskTemplateItem[];
       }
-      return [] as TaskTemplateItem[];
     },
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    staleTime: 1000 // Short stale time to ensure frequent refresh
   });
 
   // Template form
@@ -996,10 +1029,23 @@ export default function TemplatesPage() {
                   Loading tasks...
                 </div>
               ) : (() => {
-                console.log("Rendering template items section. Items:", templateItems);
-                console.log("Is array:", Array.isArray(templateItems));
-                console.log("Length:", templateItems?.length || 0);
-                return templateItems && Array.isArray(templateItems) && templateItems.length > 0;
+                // Log template items details for debugging
+                console.log("Rendering template items section:");
+                console.log("- Items:", templateItems);
+                console.log("- Is array:", Array.isArray(templateItems));
+                console.log("- Length:", templateItems?.length || 0);
+                console.log("- Selected template:", selectedTemplate);
+                
+                // Force a check of all items to ensure data is valid
+                let validItems = false;
+                if (templateItems && Array.isArray(templateItems)) {
+                  validItems = templateItems.length > 0;
+                  templateItems.forEach((item, index) => {
+                    console.log(`- Item ${index}:`, item);
+                  });
+                }
+                
+                return validItems;
               })() ? (
                 <Table>
                   <TableCaption>
