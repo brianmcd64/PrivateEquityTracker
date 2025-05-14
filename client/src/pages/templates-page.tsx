@@ -738,14 +738,6 @@ export default function TemplatesPage() {
                     <Form {...templateItemForm}>
                       <form
                         id="template-item-form" 
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          console.log("Form submitted directly");
-                          const formData = templateItemForm.getValues();
-                          console.log("Form values from getValues:", formData);
-                          onTemplateItemSubmit(formData);
-                          return false; // Prevent default form submission
-                        }} 
                         className="space-y-4"
                       >
                         <FormField
@@ -874,21 +866,43 @@ export default function TemplatesPage() {
                               updateTemplateItemMutation.isPending
                             }
                             onClick={() => {
-                              console.log("Manual form submission triggered");
+                              // Get values from form
                               const formData = templateItemForm.getValues();
-                              console.log("Form data on manual click:", formData);
+                              console.log("Form data to submit:", formData);
                               
-                              // Validate form data
+                              if (!selectedTemplate) {
+                                toast({
+                                  title: "Error",
+                                  description: "No template selected",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                              
                               if (!formData.title) {
                                 toast({
-                                  title: "Validation Error",
+                                  title: "Error",
                                   description: "Title is required",
                                   variant: "destructive",
                                 });
                                 return;
                               }
                               
-                              onTemplateItemSubmit(formData);
+                              if (isEditItem && selectedItem) {
+                                // Update existing item
+                                updateTemplateItemMutation.mutate({
+                                  id: selectedItem.id,
+                                  data: formData
+                                });
+                              } else {
+                                // Create new item
+                                const createData = {
+                                  ...formData,
+                                  templateId: selectedTemplate.id
+                                };
+                                console.log("Creating item with data:", createData);
+                                createTemplateItemMutation.mutate(createData);
+                              }
                             }}
                           >
                             {createTemplateItemMutation.isPending || updateTemplateItemMutation.isPending
