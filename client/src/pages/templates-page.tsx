@@ -101,7 +101,8 @@ export default function TemplatesPage() {
   const {
     data: templates,
     isLoading: templatesLoading,
-    error: templatesError
+    error: templatesError,
+    refetch
   } = useQuery<TaskTemplate[]>({
     queryKey: ["/api/task-templates"],
   });
@@ -229,6 +230,13 @@ export default function TemplatesPage() {
     mutationFn: async (data: TemplateFormValues) => {
       console.log("Creating template with data:", data);
       
+      // Ensure isDefault is a boolean
+      const formattedData = {
+        ...data,
+        isDefault: Boolean(data.isDefault)
+      };
+      console.log("Creating with formatted data:", formattedData);
+      
       // Using fetch directly with better error handling
       try {
         const response = await fetch("/api/task-templates", {
@@ -237,7 +245,7 @@ export default function TemplatesPage() {
             "Content-Type": "application/json",
           },
           credentials: "include",
-          body: JSON.stringify(data)
+          body: JSON.stringify(formattedData)
         });
         
         if (!response.ok) {
@@ -260,12 +268,21 @@ export default function TemplatesPage() {
         throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       toast({
         title: "Success",
         description: "Template created successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
+      
+      // If this template was set as default, force a complete refresh to update UI state
+      if (variables.isDefault) {
+        console.log("Created default template, forcing immediate refetch");
+        queryClient.resetQueries({ queryKey: ["/api/task-templates"] });
+        queryClient.refetchQueries({ queryKey: ["/api/task-templates"] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
+      }
+      
       setIsCreateTemplateOpen(false);
       templateForm.reset();
     },
@@ -297,10 +314,10 @@ export default function TemplatesPage() {
       // If we are setting a template as default, we need to update the local templates state
       // to reflect that other templates are no longer default
       if (variables.data.isDefault) {
-        // Force an immediate refetch to get the updated state
-        queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
-        // Immediately refetch
-        refetch();
+        console.log("Setting template as default, forcing immediate refetch");
+        // Force a complete refetch to get the updated state
+        queryClient.resetQueries({ queryKey: ["/api/task-templates"] });
+        queryClient.refetchQueries({ queryKey: ["/api/task-templates"] });
       } else {
         // Just invalidate for regular updates
         queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
