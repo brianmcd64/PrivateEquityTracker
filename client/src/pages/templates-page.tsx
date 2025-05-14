@@ -280,19 +280,38 @@ export default function TemplatesPage() {
 
   const updateTemplateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: TemplateFormValues }) => {
-      return await apiRequest("PATCH", `/api/task-templates/${id}`, data);
+      console.log("Updating template with data:", data);
+      // Ensure isDefault is a boolean
+      const formattedData = {
+        ...data,
+        isDefault: Boolean(data.isDefault)
+      };
+      return await apiRequest("PATCH", `/api/task-templates/${id}`, formattedData);
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       toast({
         title: "Success",
         description: "Template updated successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
+      
+      // If we are setting a template as default, we need to update the local templates state
+      // to reflect that other templates are no longer default
+      if (variables.data.isDefault) {
+        // Force an immediate refetch to get the updated state
+        queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
+        // Immediately refetch
+        refetch();
+      } else {
+        // Just invalidate for regular updates
+        queryClient.invalidateQueries({ queryKey: ["/api/task-templates"] });
+      }
+      
       setIsCreateTemplateOpen(false);
       setIsEditTemplate(false);
       templateForm.reset();
     },
     onError: (error: Error) => {
+      console.error("Template update error:", error);
       toast({
         title: "Error",
         description: `Failed to update template: ${error.message}`,
