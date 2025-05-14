@@ -736,14 +736,15 @@ export default function TemplatesPage() {
                       </DialogDescription>
                     </DialogHeader>
                     <Form {...templateItemForm}>
-                      <form 
+                      <form
+                        id="template-item-form" 
                         onSubmit={(e) => {
                           e.preventDefault();
-                          console.log("Form submitted");
-                          templateItemForm.handleSubmit((data) => {
-                            console.log("Form data:", data);
-                            onTemplateItemSubmit(data);
-                          })();
+                          console.log("Form submitted directly");
+                          const formData = templateItemForm.getValues();
+                          console.log("Form values from getValues:", formData);
+                          onTemplateItemSubmit(formData);
+                          return false; // Prevent default form submission
                         }} 
                         className="space-y-4"
                       >
@@ -867,11 +868,28 @@ export default function TemplatesPage() {
                             Cancel
                           </Button>
                           <Button 
-                            type="submit" 
+                            type="button" 
                             disabled={
                               createTemplateItemMutation.isPending || 
                               updateTemplateItemMutation.isPending
                             }
+                            onClick={() => {
+                              console.log("Manual form submission triggered");
+                              const formData = templateItemForm.getValues();
+                              console.log("Form data on manual click:", formData);
+                              
+                              // Validate form data
+                              if (!formData.title) {
+                                toast({
+                                  title: "Validation Error",
+                                  description: "Title is required",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                              
+                              onTemplateItemSubmit(formData);
+                            }}
                           >
                             {createTemplateItemMutation.isPending || updateTemplateItemMutation.isPending
                               ? "Saving..."
