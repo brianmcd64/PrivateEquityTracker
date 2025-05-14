@@ -13,6 +13,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 interface KanbanBoardProps {
   tasks: Task[];
   onAddTask?: () => void;
+  phaseFilter?: string;
+  categoryFilter?: string;
+  ownerFilter?: string;
 }
 
 // Mock users for the prototype
@@ -23,7 +26,7 @@ const userMap: Record<number, { name: string; role: string }> = {
   4: { name: "Tom Wilson", role: "functional_lead" },
 };
 
-export function KanbanBoard({ tasks, onAddTask }: KanbanBoardProps) {
+export function KanbanBoard({ tasks, onAddTask, phaseFilter, categoryFilter, ownerFilter }: KanbanBoardProps) {
   const { toast } = useToast();
   const [customStatuses] = useLocalStorage<string[]>("customStatuses", []);
   
@@ -36,9 +39,18 @@ export function KanbanBoard({ tasks, onAddTask }: KanbanBoardProps) {
     ...customStatuses
   ];
   
-  // Group tasks by status
+  // Filter tasks based on the provided filters
+  const filteredTasks = tasks.filter(task => {
+    return (
+      (!phaseFilter || task.phase === phaseFilter) &&
+      (!categoryFilter || task.category === categoryFilter) &&
+      (!ownerFilter || (ownerFilter === "unassigned" ? !task.assignedTo : task.assignedTo === parseInt(ownerFilter)))
+    );
+  });
+  
+  // Group filtered tasks by status
   const tasksByStatus = allStatuses.reduce((groups, status) => {
-    groups[status] = tasks.filter(task => task.status === status);
+    groups[status] = filteredTasks.filter(task => task.status === status);
     return groups;
   }, {} as Record<string, Task[]>);
   

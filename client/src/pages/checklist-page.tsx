@@ -36,6 +36,14 @@ import {
 
 import { useLocalStorage } from "@/hooks/use-local-storage";
 
+// Mock users for the prototype
+const userMap: Record<number, { name: string; role: string }> = {
+  1: { name: "Sarah Johnson", role: "deal_lead" },
+  2: { name: "Michael Reynolds", role: "functional_lead" },
+  3: { name: "Amanda Lee", role: "functional_lead" },
+  4: { name: "Tom Wilson", role: "functional_lead" },
+};
+
 export default function ChecklistPage() {
   const [_, navigate] = useLocation();
   const { user } = useAuth();
@@ -86,6 +94,11 @@ export default function ChecklistPage() {
   
   // View mode state for list organization
   const [viewMode, setViewMode] = useState<"phase" | "date" | "category" | "owner">("phase");
+  
+  // Filter states
+  const [phaseFilter, setPhaseFilter] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [ownerFilter, setOwnerFilter] = useState<string>("");
   
   // View type toggle (list vs kanban)
   const [viewType, setViewType] = useState<"list" | "kanban">("list");
@@ -263,25 +276,82 @@ export default function ChecklistPage() {
         
         {/* Right-aligned buttons container */}
         <div className="flex items-center gap-3">
-          {/* View Mode Selector (only shown in list view) */}
-          {viewType === "list" && (
-            <Select value={viewMode} onValueChange={(value) => setViewMode(value as "phase" | "date" | "category" | "owner")}>
+          {/* View Mode Selector (shown in both list and kanban views) */}
+          <Select value={viewMode} onValueChange={(value) => setViewMode(value as "phase" | "date" | "category" | "owner")}>
+            <SelectTrigger className="w-[180px]">
+              <div className="flex items-center">
+                <ListFilter className="mr-2 h-4 w-4" />
+                <span>View: {
+                  viewMode === "phase" ? "By Phase" : 
+                  viewMode === "category" ? "By Category" : 
+                  viewMode === "owner" ? "By Owner" : 
+                  "By Date"
+                }</span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="phase">View by Phase</SelectItem>
+              <SelectItem value="category">View by Category</SelectItem>
+              <SelectItem value="owner">View by Owner</SelectItem>
+              <SelectItem value="date">View by Date</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          {/* Additional Filters */}
+          {viewMode === "phase" && (
+            <Select value={phaseFilter} onValueChange={setPhaseFilter}>
               <SelectTrigger className="w-[180px]">
-                <div className="flex items-center">
-                  <ListFilter className="mr-2 h-4 w-4" />
-                  <span>View: {
-                    viewMode === "phase" ? "By Phase" : 
-                    viewMode === "category" ? "By Category" : 
-                    viewMode === "owner" ? "By Owner" : 
-                    "By Date"
-                  }</span>
-                </div>
+                <span>{phaseFilter ? "Phase: " + phaseFilter.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "All Phases"}</span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="phase">View by Phase</SelectItem>
-                <SelectItem value="category">View by Category</SelectItem>
-                <SelectItem value="owner">View by Owner</SelectItem>
-                <SelectItem value="date">View by Date</SelectItem>
+                <SelectItem value="">All Phases</SelectItem>
+                <SelectItem value="loi_signing">LOI Signing & DD Kickoff</SelectItem>
+                <SelectItem value="planning_initial">Planning & Initial Information Requests</SelectItem>
+                <SelectItem value="document_review">Document Review & Tracker Updates</SelectItem>
+                <SelectItem value="mid_phase_review">Mid-Phase Review</SelectItem>
+                <SelectItem value="deep_dives">Deep Dives & Secondary Requests</SelectItem>
+                <SelectItem value="final_risk_review">Final Risk Review & Negotiation</SelectItem>
+                <SelectItem value="deal_closing">Deal Closing Preparation</SelectItem>
+                <SelectItem value="post_close">Post-Close Integration Planning</SelectItem>
+                {customPhases.map(phase => (
+                  <SelectItem key={phase} value={phase}>{phase.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
+          {viewMode === "category" && (
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[180px]">
+                <span>{categoryFilter ? "Category: " + categoryFilter.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "All Categories"}</span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="operating_team">Operating Team</SelectItem>
+                <SelectItem value="seller_broker">Seller / Broker</SelectItem>
+                <SelectItem value="ir_bank">IR / Bank</SelectItem>
+                <SelectItem value="legal">Legal</SelectItem>
+                <SelectItem value="financial">Financial</SelectItem>
+                <SelectItem value="investment_committee">Investment Committee</SelectItem>
+                {customCategories.map(category => (
+                  <SelectItem key={category} value={category}>{category.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
+          {viewMode === "owner" && (
+            <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+              <SelectTrigger className="w-[180px]">
+                <span>{ownerFilter ? (ownerFilter === "unassigned" ? "Unassigned" : "Owner: " + userMap[parseInt(ownerFilter)]?.name) : "All Owners"}</span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Owners</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                <SelectItem value="1">Sarah Johnson</SelectItem>
+                <SelectItem value="2">Michael Reynolds</SelectItem>
+                <SelectItem value="3">Amanda Lee</SelectItem>
+                <SelectItem value="4">Tom Wilson</SelectItem>
               </SelectContent>
             </Select>
           )}
