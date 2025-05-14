@@ -299,12 +299,12 @@ export default function ChecklistPage() {
           
           {/* Additional Filters */}
           {viewMode === "phase" && (
-            <Select value={phaseFilter} onValueChange={setPhaseFilter}>
+            <Select value={phaseFilter || "all_phases"} onValueChange={(value) => setPhaseFilter(value === "all_phases" ? "" : value)}>
               <SelectTrigger className="w-[180px]">
                 <span>{phaseFilter ? "Phase: " + phaseFilter.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "All Phases"}</span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Phases</SelectItem>
+                <SelectItem value="all_phases">All Phases</SelectItem>
                 <SelectItem value="loi_signing">LOI Signing & DD Kickoff</SelectItem>
                 <SelectItem value="planning_initial">Planning & Initial Information Requests</SelectItem>
                 <SelectItem value="document_review">Document Review & Tracker Updates</SelectItem>
@@ -321,12 +321,12 @@ export default function ChecklistPage() {
           )}
           
           {viewMode === "category" && (
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select value={categoryFilter || "all_categories"} onValueChange={(value) => setCategoryFilter(value === "all_categories" ? "" : value)}>
               <SelectTrigger className="w-[180px]">
                 <span>{categoryFilter ? "Category: " + categoryFilter.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "All Categories"}</span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all_categories">All Categories</SelectItem>
                 <SelectItem value="operating_team">Operating Team</SelectItem>
                 <SelectItem value="seller_broker">Seller / Broker</SelectItem>
                 <SelectItem value="ir_bank">IR / Bank</SelectItem>
@@ -341,12 +341,12 @@ export default function ChecklistPage() {
           )}
           
           {viewMode === "owner" && (
-            <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+            <Select value={ownerFilter || "all_owners"} onValueChange={(value) => setOwnerFilter(value === "all_owners" ? "" : value)}>
               <SelectTrigger className="w-[180px]">
                 <span>{ownerFilter ? (ownerFilter === "unassigned" ? "Unassigned" : "Owner: " + userMap[parseInt(ownerFilter)]?.name) : "All Owners"}</span>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Owners</SelectItem>
+                <SelectItem value="all_owners">All Owners</SelectItem>
                 <SelectItem value="unassigned">Unassigned</SelectItem>
                 <SelectItem value="1">Sarah Johnson</SelectItem>
                 <SelectItem value="2">Michael Reynolds</SelectItem>
