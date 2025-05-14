@@ -142,8 +142,33 @@ export function KanbanBoard({ tasks, onAddTask, phaseFilter, categoryFilter, own
     return `Due ${formatDistanceToNow(dueDate, { addSuffix: true })}`;
   };
 
+  // Check if any filters are applied
+  const hasFilters = phaseFilter || categoryFilter || ownerFilter;
+  
   return (
     <div className="overflow-x-auto pb-4">
+      {hasFilters && (
+        <div className="mb-4 px-2 py-3 bg-neutral-50 rounded-md border border-neutral-200 text-sm flex items-center">
+          <div className="text-neutral-500 font-medium">
+            Filtered by: {' '}
+            {phaseFilter && (
+              <span className="inline-flex items-center bg-primary/10 text-primary rounded-full px-2 py-1 text-xs mr-2">
+                Phase: {phaseFilter.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </span>
+            )}
+            {categoryFilter && (
+              <span className="inline-flex items-center bg-primary/10 text-primary rounded-full px-2 py-1 text-xs mr-2">
+                Category: {categoryFilter.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </span>
+            )}
+            {ownerFilter && (
+              <span className="inline-flex items-center bg-primary/10 text-primary rounded-full px-2 py-1 text-xs mr-2">
+                Owner: {ownerFilter === "unassigned" ? "Unassigned" : userMap[parseInt(ownerFilter)]?.name}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
       <div className="flex gap-4 min-w-max">
         {allStatuses.map(status => (
           <div key={status} className="w-[320px] flex-shrink-0">

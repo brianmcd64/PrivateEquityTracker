@@ -531,6 +531,9 @@ export default function ChecklistPage() {
         <KanbanBoard 
           tasks={tasks || []} 
           onAddTask={canAddTask ? handleAddTask : undefined}
+          phaseFilter={viewMode === "phase" ? phaseFilter : undefined}
+          categoryFilter={viewMode === "category" ? categoryFilter : undefined}
+          ownerFilter={viewMode === "owner" ? ownerFilter : undefined}
         />
       )}
       
