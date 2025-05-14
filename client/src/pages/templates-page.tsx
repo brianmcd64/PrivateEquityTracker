@@ -115,7 +115,10 @@ export default function TemplatesPage() {
     queryFn: async () => {
       if (!selectedTemplate) return [] as TaskTemplateItem[];
       const response = await apiRequest("GET", `/api/task-templates/${selectedTemplate.id}/items`);
-      return (response || []) as TaskTemplateItem[];
+      if (response && Array.isArray(response)) {
+        return response as TaskTemplateItem[];
+      }
+      return [] as TaskTemplateItem[];
     }
   });
 
@@ -148,7 +151,7 @@ export default function TemplatesPage() {
       templateForm.reset({
         name: selectedTemplate.name,
         description: selectedTemplate.description || "",
-        isDefault: selectedTemplate.isDefault,
+        isDefault: selectedTemplate.isDefault || false,
       });
     } else if (!isEditTemplate) {
       templateForm.reset({
@@ -250,7 +253,15 @@ export default function TemplatesPage() {
 
   const createTemplateItemMutation = useMutation({
     mutationFn: async (data: TemplateItemFormValues & { templateId: number }) => {
-      return await apiRequest("POST", "/api/task-template-items", data);
+      console.log("Creating template item with data:", data);
+      try {
+        const result = await apiRequest("POST", "/api/task-template-items", data);
+        console.log("Template item creation result:", result);
+        return result;
+      } catch (error) {
+        console.error("Error creating template item:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -266,6 +277,7 @@ export default function TemplatesPage() {
       templateItemForm.reset();
     },
     onError: (error: Error) => {
+      console.error("Template item creation error:", error);
       toast({
         title: "Error",
         description: `Failed to create template item: ${error.message}`,
@@ -599,20 +611,24 @@ export default function TemplatesPage() {
                     : "Select a template to manage its tasks"}
                 </CardDescription>
               </div>
-              {selectedTemplate && (
-                <Dialog open={isCreateItemOpen} onOpenChange={setIsCreateItemOpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      size="sm" 
-                      disabled={!selectedTemplate}
-                      onClick={() => {
-                        setIsEditItem(false);
-                        templateItemForm.reset();
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Add Task
-                    </Button>
-                  </DialogTrigger>
+              {selectedTemplate ? (
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    setIsEditItem(false);
+                    templateItemForm.reset();
+                    setIsCreateItemOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add Task
+                </Button>
+              ) : (
+                <Button size="sm" disabled>
+                  <Plus className="h-4 w-4 mr-1" /> Add Task
+                </Button>
+              )}
+
+              <Dialog open={isCreateItemOpen} onOpenChange={setIsCreateItemOpen}>
                   <DialogContent className="sm:max-w-[550px]">
                     <DialogHeader>
                       <DialogTitle>
@@ -768,7 +784,6 @@ export default function TemplatesPage() {
                     </Form>
                   </DialogContent>
                 </Dialog>
-              )}
             </CardHeader>
             <CardContent>
               {!selectedTemplate ? (
