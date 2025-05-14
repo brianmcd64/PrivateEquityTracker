@@ -369,20 +369,30 @@ export default function TemplatesPage() {
   const onTemplateItemSubmit = (values: TemplateItemFormValues) => {
     if (!selectedTemplate) {
       console.error("No template selected");
+      toast({
+        title: "Error",
+        description: "No template selected. Please select a template first.",
+        variant: "destructive",
+      });
       return;
     }
 
     console.log("Submitting template item with values:", values);
+    console.log("Selected template:", selectedTemplate);
+    console.log("Is edit mode:", isEditItem);
+    console.log("Selected item:", selectedItem);
     
     if (isEditItem && selectedItem) {
       console.log("Updating existing template item");
       updateTemplateItemMutation.mutate({ id: selectedItem.id, data: values });
     } else {
       console.log("Creating new template item for template ID:", selectedTemplate.id);
-      createTemplateItemMutation.mutate({
+      const dataToSubmit = {
         ...values,
         templateId: selectedTemplate.id,
-      });
+      };
+      console.log("Data to submit:", dataToSubmit);
+      createTemplateItemMutation.mutate(dataToSubmit);
     }
   };
 
@@ -395,8 +405,21 @@ export default function TemplatesPage() {
 
   // Function to open template item edit dialog
   const handleEditItem = (item: TaskTemplateItem) => {
+    console.log("Edit item clicked:", item);
     setSelectedItem(item);
     setIsEditItem(true);
+    
+    // Reset form with existing values before opening dialog
+    templateItemForm.reset({
+      title: item.title,
+      description: item.description || "",
+      phase: item.phase,
+      category: item.category,
+      daysFromStart: item.daysFromStart,
+      assignedTo: item.assignedTo,
+    });
+    
+    // Open dialog after form reset
     setIsCreateItemOpen(true);
   };
 
@@ -637,9 +660,10 @@ export default function TemplatesPage() {
                     : "Select a template to manage its tasks"}
                 </CardDescription>
               </div>
-              <Dialog onOpenChange={(open) => {
-                  setIsCreateItemOpen(open);
-                  if (open) {
+              {selectedTemplate ? (
+                <Button 
+                  size="sm" 
+                  onClick={() => {
                     setIsEditItem(false);
                     templateItemForm.reset({
                       title: "",
@@ -649,19 +673,21 @@ export default function TemplatesPage() {
                       daysFromStart: 0,
                       assignedTo: undefined
                     });
-                  }
-                }}>
-                  <DialogTrigger asChild>
-                    {selectedTemplate ? (
-                      <Button size="sm">
-                        <Plus className="h-4 w-4 mr-1" /> Add Task
-                      </Button>
-                    ) : (
-                      <Button size="sm" disabled>
-                        <Plus className="h-4 w-4 mr-1" /> Add Task
-                      </Button>
-                    )}
-                  </DialogTrigger>
+                    setIsCreateItemOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add Task
+                </Button>
+              ) : (
+                <Button size="sm" disabled>
+                  <Plus className="h-4 w-4 mr-1" /> Add Task
+                </Button>
+              )}
+              
+              <Dialog 
+                open={isCreateItemOpen} 
+                onOpenChange={setIsCreateItemOpen}
+              >
                   <DialogContent className="sm:max-w-[550px]">
                     <DialogHeader>
                       <DialogTitle>
