@@ -446,6 +446,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const logs = await storage.getActivityLogsByDeal(dealId, limit);
     res.json(logs);
   });
+  
+  // ============================
+  // Task Template Routes
+  // ============================
+  
+  // Get all task templates
+  app.get("/api/task-templates", isAuthenticated, async (req, res) => {
+    const templates = await storage.getTaskTemplates();
+    res.json(templates);
+  });
+  
+  // Get default task template
+  app.get("/api/task-templates/default", isAuthenticated, async (req, res) => {
+    const template = await storage.getDefaultTaskTemplate();
+    if (!template) {
+      return res.status(404).json({ message: "No default template found" });
+    }
+    res.json(template);
+  });
+  
+  // Get a specific task template
+  app.get("/api/task-templates/:id", isAuthenticated, async (req, res) => {
+    const templateId = parseInt(req.params.id);
+    const template = await storage.getTaskTemplate(templateId);
+    if (!template) {
+      return res.status(404).json({ message: "Template not found" });
+    }
+    res.json(template);
+  });
+  
+  // Get template items for a template
+  app.get("/api/task-templates/:id/items", isAuthenticated, async (req, res) => {
+    const templateId = parseInt(req.params.id);
+    const items = await storage.getTaskTemplateItems(templateId);
+    res.json(items);
+  });
+  
+  // Create a new task template
+  app.post("/api/task-templates", isAuthenticated, isDealLead, async (req, res) => {
+    try {
+      const templateData = {
+        ...req.body,
+        createdBy: req.user!.id
+      };
+      
+      const template = await storage.createTaskTemplate(templateData);
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: 0, // Not deal-specific
+        userId: req.user!.id,
+        action: "created",
+        entityType: "task_template",
+        entityId: template.id,
+        details: `Created task template: ${template.name}`
+      });
+      
+      res.status(201).json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid template data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // Create a new template item
+  app.post("/api/task-templates/:templateId/items", isAuthenticated, isDealLead, async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.templateId);
+      const itemData = {
+        ...req.body,
+        templateId
+      };
+      
+      const item = await storage.createTaskTemplateItem(itemData);
+      
+      res.status(201).json(item);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid template item data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // Update a task template
+  app.patch("/api/task-templates/:id", isAuthenticated, isDealLead, async (req, res) => {
+    try {
+      const templateId = parseInt(req.params.id);
+      const templateData = req.body;
+      
+      const updatedTemplate = await storage.updateTaskTemplate(templateId, templateData);
+      
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      res.json(updatedTemplate);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid template data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // Delete a task template
+  app.delete("/api/task-templates/:id", isAuthenticated, isDealLead, async (req, res) => {
+    const templateId = parseInt(req.params.id);
+    const success = await storage.deleteTaskTemplate(templateId);
+    
+    if (!success) {
+      return res.status(404).json({ message: "Template not found" });
+    }
+    
+    res.status(204).end();
+  });
+  
+  // Apply a template to a deal (generate tasks)
+  app.post("/api/deals/:dealId/apply-template", isAuthenticated, isDealLead, async (req, res) => {
+    try {
+      const dealId = parseInt(req.params.dealId);
+      const { templateId } = req.body;
+      
+      if (!templateId) {
+        return res.status(400).json({ message: "templateId is required" });
+      }
+      
+      const tasks = await storage.applyTemplateToProject(templateId, dealId);
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: dealId,
+        userId: req.user!.id,
+        action: "applied",
+        entityType: "task_template",
+        entityId: templateId,
+        details: `Applied task template to deal: Created ${tasks.length} tasks`
+      });
+      
+      res.status(201).json(tasks);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(400).json({ message: error.message });
+      }
+      throw error;
+    }
+  });
 
   const httpServer = createServer(app);
 
@@ -457,9 +606,13 @@ async function seedInitialData() {
   // Check if we already have deals
   const existingDeals = await storage.getDeals();
   if (existingDeals.length > 0) {
-    // Data already seeded
+    // Data already seeded, but still check for task templates
+    await seedTaskTemplates();
     return;
   }
+  
+  // Create templates first so we can reference them later
+  await seedTaskTemplates();
   
   // Create a test deal
   const deal = await storage.createDeal({
@@ -473,37 +626,37 @@ async function seedInitialData() {
       dealId: deal.id,
       title: "Initial Financial Review",
       description: "Review P&L, balance sheet, and cash flow statements for past 3 years",
-      phase: TaskPhases.LOI,
+      phase: TaskPhases.LOI_SIGNING,
       category: TaskCategories.FINANCIAL,
       status: TaskStatuses.COMPLETED,
-      dueDate: new Date("2023-05-15"),
+      dueDate: new Date("2023-05-15").toISOString(),
       assignedTo: 2, // Michael Reynolds (financial lead)
     },
     {
       dealId: deal.id,
       title: "Legal Structure Analysis",
       description: "Review corporate organization, subsidiaries, and ownership structure",
-      phase: TaskPhases.LOI,
+      phase: TaskPhases.LOI_SIGNING,
       category: TaskCategories.LEGAL,
       status: TaskStatuses.COMPLETED,
-      dueDate: new Date("2023-05-18"),
+      dueDate: new Date("2023-05-18").toISOString(),
       assignedTo: 3, // Amanda Lee (legal lead)
     },
     {
       dealId: deal.id,
       title: "Market Analysis",
       description: "Evaluate target company's market position, competitors, and growth potential",
-      phase: TaskPhases.LOI,
-      category: TaskCategories.OPERATIONS,
+      phase: TaskPhases.LOI_SIGNING,
+      category: TaskCategories.OPERATING_TEAM,
       status: TaskStatuses.COMPLETED,
-      dueDate: new Date("2023-05-20"),
+      dueDate: new Date("2023-05-20").toISOString(),
       assignedTo: 1, // Sarah Johnson (deal lead)
     }
   ];
   
   for (const taskData of loiTasks) {
     const task = await storage.createTask(taskData);
-    await storage.updateTask(task.id, { completedAt: taskData.dueDate });
+    await storage.updateTask(task.id, { completedAt: new Date(taskData.dueDate) });
   }
   
   // Create tasks for Document Review phase (mix of completed and in progress)
@@ -672,4 +825,216 @@ async function seedInitialData() {
   }
   
   console.log("Initial data seeded successfully");
+}
+
+// Helper function to seed task templates
+async function seedTaskTemplates() {
+  // Check if we already have templates
+  const templates = await storage.getTaskTemplates();
+  if (templates.length > 0) {
+    return;
+  }
+  
+  // Create a standard due diligence template
+  const template = await storage.createTaskTemplate({
+    name: "Standard Due Diligence Process",
+    description: "A standard template for private equity due diligence process",
+    isDefault: true,
+    createdBy: 1 // Admin user
+  });
+  
+  // Create template items (tasks) with days from start calculated
+  const templateItems = [
+    // Planning phase
+    {
+      templateId: template.id,
+      title: "Assemble Due Diligence Team",
+      description: "Identify and assign team members for each functional area",
+      phase: TaskPhases.PLANNING_INITIAL,
+      category: TaskCategories.OPERATING_TEAM,
+      daysFromStart: 1,
+      assignedTo: 1 // Deal lead
+    },
+    {
+      templateId: template.id,
+      title: "Create Due Diligence Plan",
+      description: "Develop detailed work plan and timeline",
+      phase: TaskPhases.PLANNING_INITIAL,
+      category: TaskCategories.OPERATING_TEAM,
+      daysFromStart: 2,
+      assignedTo: 1 // Deal lead
+    },
+    {
+      templateId: template.id,
+      title: "Distribute Tailored Due Diligence Request List",
+      description: "Send customized request list to target company",
+      phase: TaskPhases.PLANNING_INITIAL,
+      category: TaskCategories.OPERATING_TEAM,
+      daysFromStart: 5,
+      assignedTo: 1 // Deal lead
+    },
+    {
+      templateId: template.id,
+      title: "Set Communication Protocol",
+      description: "Establish communication channels and frequency",
+      phase: TaskPhases.PLANNING_INITIAL,
+      category: TaskCategories.OPERATING_TEAM,
+      daysFromStart: 3,
+      assignedTo: 1 // Deal lead
+    },
+    
+    // Document Review phase
+    {
+      templateId: template.id,
+      title: "Financial Statement Analysis",
+      description: "Review historical financials, projections, and accounting policies",
+      phase: TaskPhases.DOCUMENT_REVIEW,
+      category: TaskCategories.FINANCIAL,
+      daysFromStart: 10,
+      assignedTo: 2 // Financial lead
+    },
+    {
+      templateId: template.id,
+      title: "Legal Structure Review",
+      description: "Analyze corporate structure, ownership, and governance",
+      phase: TaskPhases.DOCUMENT_REVIEW,
+      category: TaskCategories.LEGAL,
+      daysFromStart: 12,
+      assignedTo: 3 // Legal lead
+    },
+    {
+      templateId: template.id,
+      title: "Customer Concentration Analysis",
+      description: "Evaluate customer base and dependency risks",
+      phase: TaskPhases.DOCUMENT_REVIEW,
+      category: TaskCategories.FINANCIAL,
+      daysFromStart: 15,
+      assignedTo: 2 // Financial lead
+    },
+    {
+      templateId: template.id,
+      title: "Market and Competitive Analysis",
+      description: "Review market position, competitors, and growth potential",
+      phase: TaskPhases.DOCUMENT_REVIEW,
+      category: TaskCategories.OPERATING_TEAM,
+      daysFromStart: 18,
+      assignedTo: 4 // Operations
+    },
+    
+    // Mid Phase Review
+    {
+      templateId: template.id,
+      title: "Mid-Point Progress Review",
+      description: "Assess findings to date and adjust approach as needed",
+      phase: TaskPhases.MID_PHASE_REVIEW,
+      category: TaskCategories.OPERATING_TEAM,
+      daysFromStart: 25,
+      assignedTo: 1 // Deal lead
+    },
+    {
+      templateId: template.id,
+      title: "Preliminary Value Driver Assessment",
+      description: "Identify key value creation opportunities",
+      phase: TaskPhases.MID_PHASE_REVIEW,
+      category: TaskCategories.FINANCIAL,
+      daysFromStart: 28,
+      assignedTo: 2 // Financial lead
+    },
+    
+    // Deep Dives
+    {
+      templateId: template.id,
+      title: "Management Interviews",
+      description: "Conduct detailed interviews with key executives",
+      phase: TaskPhases.DEEP_DIVES,
+      category: TaskCategories.OPERATING_TEAM,
+      daysFromStart: 35,
+      assignedTo: 1 // Deal lead
+    },
+    {
+      templateId: template.id,
+      title: "Operational Excellence Assessment",
+      description: "Evaluate operational efficiency and improvement opportunities",
+      phase: TaskPhases.DEEP_DIVES,
+      category: TaskCategories.OPERATING_TEAM,
+      daysFromStart: 40,
+      assignedTo: 4 // Operations
+    },
+    {
+      templateId: template.id,
+      title: "Technology and IP Review",
+      description: "Assess technology stack, IP assets, and digital capabilities",
+      phase: TaskPhases.DEEP_DIVES,
+      category: TaskCategories.LEGAL,
+      daysFromStart: 42,
+      assignedTo: 3 // Legal lead
+    },
+    
+    // Final Risk Review
+    {
+      templateId: template.id,
+      title: "Risk Assessment Summary",
+      description: "Compile all identified risks with mitigation strategies",
+      phase: TaskPhases.FINAL_RISK_REVIEW,
+      category: TaskCategories.OPERATING_TEAM,
+      daysFromStart: 50,
+      assignedTo: 1 // Deal lead
+    },
+    {
+      templateId: template.id,
+      title: "Valuation Model Finalization",
+      description: "Complete financial model with sensitivity analysis",
+      phase: TaskPhases.FINAL_RISK_REVIEW,
+      category: TaskCategories.FINANCIAL,
+      daysFromStart: 55,
+      assignedTo: 2 // Financial lead
+    },
+    
+    // Deal Closing
+    {
+      templateId: template.id,
+      title: "Investment Committee Presentation",
+      description: "Prepare and deliver final investment recommendation",
+      phase: TaskPhases.DEAL_CLOSING,
+      category: TaskCategories.INVESTMENT_COMMITTEE,
+      daysFromStart: 65,
+      assignedTo: 1 // Deal lead
+    },
+    {
+      templateId: template.id,
+      title: "Final Due Diligence Report",
+      description: "Compile comprehensive findings document",
+      phase: TaskPhases.DEAL_CLOSING,
+      category: TaskCategories.OPERATING_TEAM,
+      daysFromStart: 70,
+      assignedTo: 1 // Deal lead
+    },
+    {
+      templateId: template.id,
+      title: "Transaction Documentation",
+      description: "Review and finalize all legal documentation",
+      phase: TaskPhases.DEAL_CLOSING,
+      category: TaskCategories.LEGAL,
+      daysFromStart: 75,
+      assignedTo: 3 // Legal lead
+    },
+    
+    // Post Close
+    {
+      templateId: template.id,
+      title: "100-Day Integration Plan",
+      description: "Develop detailed post-acquisition integration plan",
+      phase: TaskPhases.POST_CLOSE,
+      category: TaskCategories.OPERATING_TEAM,
+      daysFromStart: 85,
+      assignedTo: 4 // Operations
+    }
+  ];
+  
+  // Create all the template items
+  for (const item of templateItems) {
+    await storage.createTaskTemplateItem(item);
+  }
+  
+  console.log("Task templates seeded successfully");
 }

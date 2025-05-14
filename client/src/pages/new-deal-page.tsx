@@ -18,6 +18,7 @@ import { format, addDays } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { TaskTemplateSelector } from "@/components/templates/task-template-selector";
 
 // Extend the schema with validation
 const formSchema = insertDealSchema.extend({
@@ -34,6 +35,7 @@ export default function NewDealPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   
   // Define form
   const form = useForm<FormData>({
@@ -57,19 +59,58 @@ export default function NewDealPage() {
     }
   }, [startDate, form]);
   
-  // Define mutation
-  const createDealMutation = useMutation({
+  // Handle template selection
+  const handleTemplateSelect = (templateId: number | null) => {
+    setSelectedTemplateId(templateId);
+  };
+  
+  // Apply template to deal
+  const applyTemplateMutation = useMutation({
+    mutationFn: async ({ dealId, templateId }: { dealId: number, templateId: number }) => {
+      const response = await apiRequest("POST", `/api/deals/${dealId}/apply-template`, { templateId });
+      return response;
+    },
+    onSuccess: (_, variables) => {
+      toast({
+        title: "Template Applied",
+        description: `Tasks successfully created for deal #${variables.dealId}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${variables.dealId}/tasks`] });
+      navigate("/deals");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to apply template: ${error.message}`,
+        variant: "destructive",
+      });
+      navigate("/deals");
+    },
+  });
+  
+  // Define deal creation mutation
+  const createDealMutation = useMutation<any, Error, InsertDeal>({
     mutationFn: async (data: InsertDeal) => {
       const response = await apiRequest("POST", "/api/deals", data);
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (createdDeal) => {
       toast({
         title: "Success",
         description: "Deal created successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
-      navigate("/deals");
+      
+      // If a template was selected, apply it to the newly created deal
+      if (selectedTemplateId && createdDeal && createdDeal.id) {
+        applyTemplateMutation.mutate({
+          dealId: createdDeal.id,
+          templateId: selectedTemplateId
+        });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+        navigate("/deals");
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -213,6 +254,21 @@ export default function NewDealPage() {
                   )}
                 />
                 
+                {/* Task Template Selection */}
+                <div className="mt-4 p-4 bg-blue-50 rounded-md border border-blue-100">
+                  <h3 className="text-lg font-medium mb-2">Task Templates</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Select a task template to automatically create standard tasks for this deal.
+                    The due dates will be calculated based on the deal's start date.
+                  </p>
+                  
+                  <TaskTemplateSelector
+                    onTemplateSelect={handleTemplateSelect}
+                    selectedTemplateId={selectedTemplateId}
+                    label="Select Template"
+                  />
+                </div>
+                
                 <div className="flex justify-end pt-4">
                   <Button 
                     type="button" 
@@ -224,9 +280,11 @@ export default function NewDealPage() {
                   </Button>
                   <Button 
                     type="submit" 
-                    disabled={createDealMutation.isPending}
+                    disabled={createDealMutation.isPending || applyTemplateMutation.isPending}
                   >
-                    {createDealMutation.isPending ? "Creating..." : "Create Deal"}
+                    {createDealMutation.isPending || applyTemplateMutation.isPending 
+                      ? "Creating..." 
+                      : "Create Deal"}
                   </Button>
                 </div>
               </form>
