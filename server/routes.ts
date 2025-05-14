@@ -636,8 +636,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create template item
   app.post("/api/task-template-items", isAuthenticated, isDealLead, async (req, res) => {
     try {
-      const itemData = insertTaskTemplateItemSchema.parse(req.body);
-      const item = await storage.createTaskTemplateItem(itemData);
+      console.log("Received template item create request:", req.body);
+      
+      // Validate the incoming data
+      const validatedData = insertTaskTemplateItemSchema.parse(req.body);
+      console.log("Validated template item data:", validatedData);
+      
+      // Create the template item in the database
+      const item = await storage.createTaskTemplateItem(validatedData);
+      console.log("Created template item:", item);
       
       // Log activity
       await storage.createActivityLog({
@@ -651,10 +658,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(item);
     } catch (error) {
+      console.error("Error creating template item:", error);
+      
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid template item data", errors: error.errors });
       }
-      throw error;
+      
+      res.status(500).json({ message: "Failed to create template item", error: String(error) });
     }
   });
   

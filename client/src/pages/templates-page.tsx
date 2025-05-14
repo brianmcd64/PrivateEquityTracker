@@ -258,7 +258,23 @@ export default function TemplatesPage() {
     mutationFn: async (data: TemplateItemFormValues & { templateId: number }) => {
       console.log("Creating template item with data:", data);
       try {
-        const result = await apiRequest("POST", "/api/task-template-items", data);
+        // Using fetch directly with credentials to ensure cookies are sent
+        const response = await fetch("/api/task-template-items", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Server error response:", errorText);
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
+        }
+        
+        const result = await response.json();
         console.log("Template item creation result:", result);
         return result;
       } catch (error) {
@@ -351,11 +367,18 @@ export default function TemplatesPage() {
   };
 
   const onTemplateItemSubmit = (values: TemplateItemFormValues) => {
-    if (!selectedTemplate) return;
+    if (!selectedTemplate) {
+      console.error("No template selected");
+      return;
+    }
 
+    console.log("Submitting template item with values:", values);
+    
     if (isEditItem && selectedItem) {
+      console.log("Updating existing template item");
       updateTemplateItemMutation.mutate({ id: selectedItem.id, data: values });
     } else {
+      console.log("Creating new template item for template ID:", selectedTemplate.id);
       createTemplateItemMutation.mutate({
         ...values,
         templateId: selectedTemplate.id,
