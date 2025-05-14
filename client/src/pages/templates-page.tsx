@@ -637,23 +637,23 @@ export default function TemplatesPage() {
                     : "Select a template to manage its tasks"}
                 </CardDescription>
               </div>
-              <Dialog open={isCreateItemOpen} onOpenChange={setIsCreateItemOpen}>
+              <Dialog onOpenChange={(open) => {
+                  setIsCreateItemOpen(open);
+                  if (open) {
+                    setIsEditItem(false);
+                    templateItemForm.reset({
+                      title: "",
+                      description: "",
+                      phase: Object.values(TaskPhases)[0],
+                      category: Object.values(TaskCategories)[0],
+                      daysFromStart: 0,
+                      assignedTo: undefined
+                    });
+                  }
+                }}>
                   <DialogTrigger asChild>
                     {selectedTemplate ? (
-                      <Button 
-                        size="sm" 
-                        onClick={() => {
-                          setIsEditItem(false);
-                          templateItemForm.reset({
-                            title: "",
-                            description: "",
-                            phase: Object.values(TaskPhases)[0],
-                            category: Object.values(TaskCategories)[0],
-                            daysFromStart: 0,
-                            assignedTo: undefined
-                          });
-                        }}
-                      >
+                      <Button size="sm">
                         <Plus className="h-4 w-4 mr-1" /> Add Task
                       </Button>
                     ) : (
