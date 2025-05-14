@@ -954,7 +954,10 @@ export default function TemplatesPage() {
                                   <SelectContent>
                                     {Object.entries(TaskPhases).map(([key, value]) => (
                                       <SelectItem key={value} value={value}>
-                                        {key.replace(/_/g, " ")}
+                                        {/* Format phase names with proper capitalization */}
+                                        {key.split('_').map(word => 
+                                          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                                        ).join(' ')}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
@@ -982,7 +985,10 @@ export default function TemplatesPage() {
                                   <SelectContent>
                                     {Object.entries(TaskCategories).map(([key, value]) => (
                                       <SelectItem key={value} value={value}>
-                                        {key.replace(/_/g, " ")}
+                                        {/* Format category names with proper capitalization */}
+                                        {key.split('_').map(word => 
+                                          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                                        ).join(' ')}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
