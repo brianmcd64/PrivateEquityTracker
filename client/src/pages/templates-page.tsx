@@ -141,8 +141,8 @@ export default function TemplatesPage() {
     defaultValues: {
       title: "",
       description: "",
-      phase: "",
-      category: "",
+      phase: Object.values(TaskPhases)[0],
+      category: Object.values(TaskCategories)[0],
       daysFromStart: 0,
       assignedTo: undefined,
     },
@@ -179,8 +179,8 @@ export default function TemplatesPage() {
       templateItemForm.reset({
         title: "",
         description: "",
-        phase: "",
-        category: "",
+        phase: Object.values(TaskPhases)[0],
+        category: Object.values(TaskCategories)[0],
         daysFromStart: 0,
         assignedTo: undefined,
       });
@@ -637,25 +637,31 @@ export default function TemplatesPage() {
                     : "Select a template to manage its tasks"}
                 </CardDescription>
               </div>
-              {selectedTemplate ? (
-                <Button 
-                  size="sm" 
-                  onClick={() => {
-                    setIsEditItem(false);
-                    templateItemForm.reset();
-                    setIsCreateItemOpen(true);
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add Task
-                </Button>
-              ) : (
-                <Button size="sm" disabled>
-                  <Plus className="h-4 w-4 mr-1" /> Add Task
-                </Button>
-              )}
-
               <Dialog open={isCreateItemOpen} onOpenChange={setIsCreateItemOpen}>
-                  <DialogTrigger className="hidden">Add Task</DialogTrigger>
+                  <DialogTrigger asChild>
+                    {selectedTemplate ? (
+                      <Button 
+                        size="sm" 
+                        onClick={() => {
+                          setIsEditItem(false);
+                          templateItemForm.reset({
+                            title: "",
+                            description: "",
+                            phase: Object.values(TaskPhases)[0],
+                            category: Object.values(TaskCategories)[0],
+                            daysFromStart: 0,
+                            assignedTo: undefined
+                          });
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> Add Task
+                      </Button>
+                    ) : (
+                      <Button size="sm" disabled>
+                        <Plus className="h-4 w-4 mr-1" /> Add Task
+                      </Button>
+                    )}
+                  </DialogTrigger>
                   <DialogContent className="sm:max-w-[550px]">
                     <DialogHeader>
                       <DialogTitle>
