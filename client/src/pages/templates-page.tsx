@@ -338,7 +338,13 @@ export default function TemplatesPage() {
 
   const updateTemplateItemMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: TemplateItemFormValues }) => {
-      return await apiRequest("PATCH", `/api/task-template-items/${id}`, data);
+      // Ensure daysFromStart is a number
+      const formattedData = {
+        ...data,
+        daysFromStart: Number(data.daysFromStart)
+      };
+      console.log("Updating with formatted data:", formattedData);
+      return await apiRequest("PATCH", `/api/task-template-items/${id}`, formattedData);
     },
     onSuccess: () => {
       toast({
@@ -413,14 +419,22 @@ export default function TemplatesPage() {
     console.log("Is edit mode:", isEditItem);
     console.log("Selected item:", selectedItem);
     
+    // Ensure daysFromStart is a number
+    const formattedValues = {
+      ...values,
+      daysFromStart: Number(values.daysFromStart)
+    };
+    
+    console.log("Formatted values with numeric daysFromStart:", formattedValues);
+    
     try {
       if (isEditItem && selectedItem) {
         console.log("Updating existing template item");
-        updateTemplateItemMutation.mutate({ id: selectedItem.id, data: values });
+        updateTemplateItemMutation.mutate({ id: selectedItem.id, data: formattedValues });
       } else {
         console.log("Creating new template item for template ID:", selectedTemplate.id);
         const dataToSubmit = {
-          ...values,
+          ...formattedValues,
           templateId: selectedTemplate.id,
         };
         console.log("Data to submit:", dataToSubmit);
