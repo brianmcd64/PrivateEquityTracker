@@ -493,6 +493,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdBy: req.user!.id
       };
       
+      // If setting this template as default, unset default flag on all other templates
+      if (templateData.isDefault === true) {
+        console.log(`Creating new default template. Unsetting other default templates.`);
+        // Get all templates
+        const templates = await storage.getTaskTemplates();
+        
+        // Unset default flag on all other templates
+        for (const template of templates) {
+          if (template.isDefault) {
+            console.log(`Unsetting default flag on template ${template.id}`);
+            await storage.updateTaskTemplate(template.id, { isDefault: false });
+          }
+        }
+      }
+      
       const template = await storage.createTaskTemplate(templateData);
       
       // Log activity
@@ -510,7 +525,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid template data", errors: error.errors });
       }
-      throw error;
+      console.error("Error creating template:", error);
+      res.status(500).json({ message: error instanceof Error ? error.message : "Unknown error" });
     }
   });
   
@@ -540,28 +556,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const templateId = parseInt(req.params.id);
       const templateData = req.body;
       
+      // If setting this template as default, unset default flag on all other templates
+      if (templateData.isDefault === true) {
+        console.log(`Setting template ${templateId} as default. Unsetting other default templates.`);
+        // Get all templates
+        const templates = await storage.getTaskTemplates();
+        
+        // Unset default flag on all other templates
+        for (const template of templates) {
+          if (template.id !== templateId && template.isDefault) {
+            console.log(`Unsetting default flag on template ${template.id}`);
+            await storage.updateTaskTemplate(template.id, { isDefault: false });
+          }
+        }
+      }
+      
       const updatedTemplate = await storage.updateTaskTemplate(templateId, templateData);
-      
-      if (!updatedTemplate) {
-        return res.status(404).json({ message: "Template not found" });
-      }
-      
-      res.json(updatedTemplate);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid template data", errors: error.errors });
-      }
-      throw error;
-    }
-  });
-  
-  // Update a task template
-  app.patch("/api/task-templates/:id", isAuthenticated, isDealLead, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const templateData = req.body;
-      
-      const updatedTemplate = await storage.updateTaskTemplate(id, templateData);
       
       if (!updatedTemplate) {
         return res.status(404).json({ message: "Template not found" });
@@ -573,7 +583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.user!.id,
         action: "updated",
         entityType: "task_template",
-        entityId: id,
+        entityId: templateId,
         details: `Updated template: "${updatedTemplate.name}"`
       });
       
@@ -582,7 +592,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid template data", errors: error.errors });
       }
-      throw error;
+      console.error("Error updating template:", error);
+      res.status(500).json({ message: error instanceof Error ? error.message : "Unknown error" });
     }
   });
 
