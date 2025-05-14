@@ -227,7 +227,38 @@ export default function TemplatesPage() {
   // Mutations
   const createTemplateMutation = useMutation({
     mutationFn: async (data: TemplateFormValues) => {
-      return await apiRequest("POST", "/api/task-templates", data);
+      console.log("Creating template with data:", data);
+      
+      // Using fetch directly with better error handling
+      try {
+        const response = await fetch("/api/task-templates", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+          let errorMessage = `Server error: ${response.status}`;
+          try {
+            const errorText = await response.text();
+            console.error("Server error response:", errorText);
+            errorMessage = `${errorMessage} - ${errorText}`;
+          } catch (err) {
+            console.error("Could not parse error response:", err);
+          }
+          throw new Error(errorMessage);
+        }
+        
+        const result = await response.json();
+        console.log("Template creation result:", result);
+        return result;
+      } catch (error) {
+        console.error("Failed to create template:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({
@@ -458,10 +489,34 @@ export default function TemplatesPage() {
 
   // Form submission handlers
   const onTemplateSubmit = (values: TemplateFormValues) => {
-    if (isEditTemplate && selectedTemplate) {
-      updateTemplateMutation.mutate({ id: selectedTemplate.id, data: values });
-    } else {
-      createTemplateMutation.mutate(values);
+    console.log("Template form submitted with values:", values);
+    
+    try {
+      if (isEditTemplate && selectedTemplate) {
+        console.log("Updating existing template:", selectedTemplate.id);
+        updateTemplateMutation.mutate({ id: selectedTemplate.id, data: values });
+      } else {
+        console.log("Creating new template");
+        // Make sure we have a valid form
+        if (!values.name) {
+          console.error("Missing template name");
+          toast({
+            title: "Error",
+            description: "Template name is required",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        createTemplateMutation.mutate(values);
+      }
+    } catch (error) {
+      console.error("Error in template form submission:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while saving the template. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -623,7 +678,14 @@ export default function TemplatesPage() {
                   </DialogHeader>
                   <Form {...templateForm}>
                     <form 
-                      onSubmit={templateForm.handleSubmit(onTemplateSubmit)} 
+                      id="create-template-form"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        console.log("Form submit event triggered");
+                        const formData = templateForm.getValues();
+                        console.log("Form values:", formData);
+                        onTemplateSubmit(formData);
+                      }} 
                       className="space-y-4"
                     >
                       <FormField
@@ -687,11 +749,17 @@ export default function TemplatesPage() {
                           Cancel
                         </Button>
                         <Button 
-                          type="submit" 
+                          type="button" 
                           disabled={
                             createTemplateMutation.isPending || 
                             updateTemplateMutation.isPending
                           }
+                          onClick={() => {
+                            console.log("Template save button clicked");
+                            const formData = templateForm.getValues();
+                            console.log("Form data on click:", formData);
+                            onTemplateSubmit(formData);
+                          }}
                         >
                           {createTemplateMutation.isPending || updateTemplateMutation.isPending
                             ? "Saving..."
