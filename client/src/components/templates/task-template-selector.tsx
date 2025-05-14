@@ -36,13 +36,24 @@ export function TaskTemplateSelector({
   
   // When templates load, select the default template if no template is selected
   useEffect(() => {
-    if (templates && templates.length > 0 && !selectedTemplateId) {
+    // Initialize with the selected template if provided
+    if (selectedTemplateId) {
+      setSelectedValue(String(selectedTemplateId));
+      return;
+    }
+    
+    // Otherwise, if templates are loaded, select the default
+    if (templates && templates.length > 0) {
       // Find the default template
       const defaultTemplate = templates.find((template) => template.isDefault);
       
       if (defaultTemplate) {
         setSelectedValue(String(defaultTemplate.id));
         onTemplateSelect(defaultTemplate.id);
+      } else {
+        // If no default template, select "none"
+        setSelectedValue("none");
+        onTemplateSelect(null);
       }
     }
   }, [templates, selectedTemplateId, onTemplateSelect]);
@@ -50,7 +61,7 @@ export function TaskTemplateSelector({
   // Handle template selection change
   const handleSelectionChange = (value: string) => {
     setSelectedValue(value);
-    onTemplateSelect(value ? parseInt(value, 10) : null);
+    onTemplateSelect(value && value !== "none" ? parseInt(value, 10) : null);
   };
   
   // Handle error in loading templates
@@ -76,7 +87,7 @@ export function TaskTemplateSelector({
             <SelectValue placeholder="Select a task template" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None (No tasks)</SelectItem>
+            <SelectItem value="none">None (No tasks)</SelectItem>
             {templates && templates.map((template) => (
               <SelectItem 
                 key={template.id} 
