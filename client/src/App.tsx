@@ -10,6 +10,7 @@ import CalendarPage from "@/pages/calendar-page";
 import ReportsPage from "@/pages/reports-page";
 import NewDealPage from "@/pages/new-deal-page";
 import DealManagementPage from "@/pages/deal-management-page";
+import TemplatesPage from "@/pages/templates-page";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
@@ -25,6 +26,7 @@ function Router() {
       <ProtectedRoute path="/reports" component={ReportsPage} />
       <ProtectedRoute path="/deals" component={DealManagementPage} />
       <ProtectedRoute path="/deals/new" component={NewDealPage} />
+      <ProtectedRoute path="/templates" component={TemplatesPage} />
       <Route component={NotFound} />
     </Switch>
   );

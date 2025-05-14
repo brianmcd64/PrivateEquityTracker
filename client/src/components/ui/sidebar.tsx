@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronRight,
   Briefcase,
+  FileText,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -70,6 +71,7 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
     { path: "/calendar", label: "Calendar", icon: <Calendar className="h-5 w-5 mr-3 text-neutral-500" /> },
     { path: "/reports", label: "Reports & Analytics", icon: <BarChart3 className="h-5 w-5 mr-3 text-neutral-500" /> },
     { path: "/deals", label: "Deal Management", icon: <Briefcase className="h-5 w-5 mr-3 text-neutral-500" /> },
+    { path: "/templates", label: "Task Templates", icon: <FileText className="h-5 w-5 mr-3 text-neutral-500" /> },
   ];
 
   const handleDealClick = (dealId: number, deal: Deal) => {
