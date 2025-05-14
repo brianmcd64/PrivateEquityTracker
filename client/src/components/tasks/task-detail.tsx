@@ -452,10 +452,14 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                         <SelectValue placeholder="Select phase" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={TaskPhases.LOI}>LOI</SelectItem>
-                        <SelectItem value={TaskPhases.DOCUMENT}>Document Review</SelectItem>
-                        <SelectItem value={TaskPhases.DEEPDIVE}>Deep Dive</SelectItem>
-                        <SelectItem value={TaskPhases.FINAL}>Final Analysis</SelectItem>
+                        <SelectItem value="loi_signing">LOI Signing & DD Kickoff</SelectItem>
+                        <SelectItem value="planning_initial">Planning & Initial Information Requests</SelectItem>
+                        <SelectItem value="document_review">Document Review & Tracker Updates</SelectItem>
+                        <SelectItem value="mid_phase_review">Mid-Phase Review</SelectItem>
+                        <SelectItem value="deep_dives">Deep Dives & Secondary Requests</SelectItem>
+                        <SelectItem value="final_risk_review">Final Risk Review & Negotiation</SelectItem>
+                        <SelectItem value="deal_closing">Deal Closing Preparation</SelectItem>
+                        <SelectItem value="post_close">Post-Close Integration Planning</SelectItem>
                         
                         {/* Display custom phases */}
                         {customPhases.length > 0 && <SelectSeparator />}
@@ -468,14 +472,18 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                     </Select>
                   ) : (
                     <div className="text-sm py-1.5">
-                      {task.phase === TaskPhases.LOI ? "LOI" : 
-                       task.phase === TaskPhases.DOCUMENT ? "Document Review" : 
-                       task.phase === TaskPhases.DEEPDIVE ? "Deep Dive" : 
-                       task.phase === TaskPhases.FINAL ? "Final Analysis" : 
+                      {task.phase === "loi_signing" ? "LOI Signing & DD Kickoff" : 
+                       task.phase === "planning_initial" ? "Planning & Initial Information Requests" : 
+                       task.phase === "document_review" ? "Document Review & Tracker Updates" :
+                       task.phase === "mid_phase_review" ? "Mid-Phase Review" :
+                       task.phase === "deep_dives" ? "Deep Dives & Secondary Requests" :
+                       task.phase === "final_risk_review" ? "Final Risk Review & Negotiation" :
+                       task.phase === "deal_closing" ? "Deal Closing Preparation" :
+                       task.phase === "post_close" ? "Post-Close Integration Planning" :
                        // Handle custom phases
                        customPhases.includes(task.phase) ? 
                          task.phase.charAt(0).toUpperCase() + task.phase.slice(1).replace(/_/g, ' ') : 
-                         task.phase
+                         task.phase.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
                       }
                     </div>
                   )}
@@ -493,11 +501,12 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={TaskCategories.FINANCIAL || "financial"}>Financial</SelectItem>
-                        <SelectItem value={TaskCategories.LEGAL || "legal"}>Legal</SelectItem>
-                        <SelectItem value={TaskCategories.OPERATIONS || "operations"}>Operations</SelectItem>
-                        <SelectItem value={TaskCategories.HR || "hr"}>Human Resources</SelectItem>
-                        <SelectItem value={TaskCategories.TECH || "tech"}>Technology</SelectItem>
+                        <SelectItem value="operating_team">Operating Team</SelectItem>
+                        <SelectItem value="seller_broker">Seller / Broker</SelectItem>
+                        <SelectItem value="ir_bank">IR / Bank</SelectItem>
+                        <SelectItem value="legal">Legal</SelectItem>
+                        <SelectItem value="financial">Financial</SelectItem>
+                        <SelectItem value="investment_committee">Investment Committee</SelectItem>
                         
                         {/* Display custom categories */}
                         {customCategories.length > 0 && <Separator className="my-1" />}
@@ -510,9 +519,17 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                     </Select>
                   ) : (
                     <div className="text-sm py-1.5">
-                      {customCategories.includes(task.category) ? 
+                      {task.category === "operating_team" ? "Operating Team" :
+                       task.category === "seller_broker" ? "Seller / Broker" :
+                       task.category === "ir_bank" ? "IR / Bank" :
+                       task.category === "legal" ? "Legal" :
+                       task.category === "financial" ? "Financial" :
+                       task.category === "investment_committee" ? "Investment Committee" :
+                       // Handle custom categories
+                       customCategories.includes(task.category) ? 
                         task.category.charAt(0).toUpperCase() + task.category.slice(1).replace(/_/g, ' ') : 
-                        task.category.charAt(0).toUpperCase() + task.category.slice(1)}
+                        task.category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                      }
                     </div>
                   )}
                 </div>
