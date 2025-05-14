@@ -9,6 +9,8 @@ import {
   insertRequestSchema,
   insertRaciMatrixSchema,
   insertActivityLogSchema,
+  insertTaskTemplateSchema,
+  insertTaskTemplateItemSchema,
   UserRoles,
   TaskPhases,
   TaskCategories,
@@ -553,6 +555,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Update a task template
+  app.patch("/api/task-templates/:id", isAuthenticated, isDealLead, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const templateData = req.body;
+      
+      const updatedTemplate = await storage.updateTaskTemplate(id, templateData);
+      
+      if (!updatedTemplate) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: 0, // Not deal-specific
+        userId: req.user!.id,
+        action: "updated",
+        entityType: "task_template",
+        entityId: id,
+        details: `Updated template: "${updatedTemplate.name}"`
+      });
+      
+      res.json(updatedTemplate);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid template data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+
   // Delete a task template
   app.delete("/api/task-templates/:id", isAuthenticated, isDealLead, async (req, res) => {
     const templateId = parseInt(req.params.id);
@@ -594,6 +627,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       throw error;
     }
+  });
+  
+  // ============================
+  // Template Item Routes
+  // ============================
+  
+  // Create template item
+  app.post("/api/task-template-items", isAuthenticated, isDealLead, async (req, res) => {
+    try {
+      const itemData = insertTaskTemplateItemSchema.parse(req.body);
+      const item = await storage.createTaskTemplateItem(itemData);
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: 0, // Not deal-specific
+        userId: req.user!.id,
+        action: "created",
+        entityType: "task_template_item",
+        entityId: item.id,
+        details: `Created template item: "${item.title}"`
+      });
+      
+      res.status(201).json(item);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid template item data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // Update template item
+  app.patch("/api/task-template-items/:id", isAuthenticated, isDealLead, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const itemData = req.body;
+      
+      const updatedItem = await storage.updateTaskTemplateItem(id, itemData);
+      
+      if (!updatedItem) {
+        return res.status(404).json({ message: "Template item not found" });
+      }
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: 0, // Not deal-specific
+        userId: req.user!.id,
+        action: "updated",
+        entityType: "task_template_item",
+        entityId: id,
+        details: `Updated template item: "${updatedItem.title}"`
+      });
+      
+      res.json(updatedItem);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid template item data", errors: error.errors });
+      }
+      throw error;
+    }
+  });
+  
+  // Delete template item
+  app.delete("/api/task-template-items/:id", isAuthenticated, isDealLead, async (req, res) => {
+    const id = parseInt(req.params.id);
+    const success = await storage.deleteTaskTemplateItem(id);
+    
+    if (!success) {
+      return res.status(404).json({ message: "Template item not found" });
+    }
+    
+    // Log activity
+    await storage.createActivityLog({
+      dealId: 0, // Not deal-specific
+      userId: req.user!.id,
+      action: "deleted",
+      entityType: "task_template_item",
+      entityId: id,
+      details: "Deleted template item"
+    });
+    
+    res.status(204).end();
   });
 
   const httpServer = createServer(app);
