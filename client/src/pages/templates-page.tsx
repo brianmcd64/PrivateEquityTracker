@@ -272,6 +272,14 @@ export default function TemplatesPage() {
         throw new Error("Template ID is required");
       }
       
+      // Ensure daysFromStart is a number before sending
+      const formattedData = {
+        ...data,
+        daysFromStart: Number(data.daysFromStart)
+      };
+      
+      console.log("Formatted data with numeric daysFromStart:", formattedData);
+      
       // Using fetch directly with credentials to ensure cookies are sent
       const response = await fetch("/api/task-template-items", {
         method: "POST",
@@ -279,7 +287,7 @@ export default function TemplatesPage() {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(data)
+        body: JSON.stringify(formattedData)
       });
       
       if (!response.ok) {
@@ -841,7 +849,13 @@ export default function TemplatesPage() {
                                   type="number" 
                                   min={0}
                                   max={180}
-                                  {...field} 
+                                  {...field}
+                                  onChange={(e) => {
+                                    // Ensure we're setting a number value
+                                    const value = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                                    field.onChange(value);
+                                  }}
+                                  value={field.value || 0}
                                 />
                               </FormControl>
                               <FormDescription>
@@ -889,16 +903,20 @@ export default function TemplatesPage() {
                               }
                               
                               if (isEditItem && selectedItem) {
-                                // Update existing item
+                                // Update existing item - ensure daysFromStart is a number
                                 updateTemplateItemMutation.mutate({
                                   id: selectedItem.id,
-                                  data: formData
+                                  data: {
+                                    ...formData,
+                                    daysFromStart: Number(formData.daysFromStart)
+                                  }
                                 });
                               } else {
-                                // Create new item
+                                // Create new item - ensure daysFromStart is a number
                                 const createData = {
                                   ...formData,
-                                  templateId: selectedTemplate.id
+                                  templateId: selectedTemplate.id,
+                                  daysFromStart: Number(formData.daysFromStart)
                                 };
                                 console.log("Creating item with data:", createData);
                                 createTemplateItemMutation.mutate(createData);
