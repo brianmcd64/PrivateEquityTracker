@@ -257,30 +257,46 @@ export default function TemplatesPage() {
   const createTemplateItemMutation = useMutation({
     mutationFn: async (data: TemplateItemFormValues & { templateId: number }) => {
       console.log("Creating template item with data:", data);
-      try {
-        // Using fetch directly with credentials to ensure cookies are sent
-        const response = await fetch("/api/task-template-items", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify(data)
-        });
-        
-        if (!response.ok) {
+      
+      // Validate the data before sending to ensure we have required fields
+      if (!data.title) {
+        throw new Error("Title is required");
+      }
+      if (!data.phase) {
+        throw new Error("Phase is required");
+      }
+      if (!data.category) {
+        throw new Error("Category is required");
+      }
+      if (typeof data.templateId !== 'number') {
+        throw new Error("Template ID is required");
+      }
+      
+      // Using fetch directly with credentials to ensure cookies are sent
+      const response = await fetch("/api/task-template-items", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        let errorMessage = `Server error: ${response.status}`;
+        try {
           const errorText = await response.text();
           console.error("Server error response:", errorText);
-          throw new Error(`Server error: ${response.status} - ${errorText}`);
+          errorMessage = `${errorMessage} - ${errorText}`;
+        } catch (err) {
+          console.error("Could not parse error response:", err);
         }
-        
-        const result = await response.json();
-        console.log("Template item creation result:", result);
-        return result;
-      } catch (error) {
-        console.error("Error creating template item:", error);
-        throw error;
+        throw new Error(errorMessage);
       }
+      
+      const result = await response.json();
+      console.log("Template item creation result:", result);
+      return result;
     },
     onSuccess: () => {
       toast({
@@ -293,7 +309,14 @@ export default function TemplatesPage() {
         });
       }
       setIsCreateItemOpen(false);
-      templateItemForm.reset();
+      templateItemForm.reset({
+        title: "",
+        description: "",
+        phase: Object.values(TaskPhases)[0],
+        category: Object.values(TaskCategories)[0],
+        daysFromStart: 0,
+        assignedTo: undefined,
+      });
     },
     onError: (error: Error) => {
       console.error("Template item creation error:", error);
@@ -382,17 +405,26 @@ export default function TemplatesPage() {
     console.log("Is edit mode:", isEditItem);
     console.log("Selected item:", selectedItem);
     
-    if (isEditItem && selectedItem) {
-      console.log("Updating existing template item");
-      updateTemplateItemMutation.mutate({ id: selectedItem.id, data: values });
-    } else {
-      console.log("Creating new template item for template ID:", selectedTemplate.id);
-      const dataToSubmit = {
-        ...values,
-        templateId: selectedTemplate.id,
-      };
-      console.log("Data to submit:", dataToSubmit);
-      createTemplateItemMutation.mutate(dataToSubmit);
+    try {
+      if (isEditItem && selectedItem) {
+        console.log("Updating existing template item");
+        updateTemplateItemMutation.mutate({ id: selectedItem.id, data: values });
+      } else {
+        console.log("Creating new template item for template ID:", selectedTemplate.id);
+        const dataToSubmit = {
+          ...values,
+          templateId: selectedTemplate.id,
+        };
+        console.log("Data to submit:", dataToSubmit);
+        createTemplateItemMutation.mutate(dataToSubmit);
+      }
+    } catch (error) {
+      console.error("Error in form submission:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while saving the task. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -705,7 +737,14 @@ export default function TemplatesPage() {
                     </DialogHeader>
                     <Form {...templateItemForm}>
                       <form 
-                        onSubmit={templateItemForm.handleSubmit(onTemplateItemSubmit)} 
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          console.log("Form submitted");
+                          templateItemForm.handleSubmit((data) => {
+                            console.log("Form data:", data);
+                            onTemplateItemSubmit(data);
+                          })();
+                        }} 
                         className="space-y-4"
                       >
                         <FormField
