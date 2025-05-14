@@ -110,19 +110,23 @@ export default function TemplatesPage() {
   const {
     data: templateItems,
     isLoading: itemsLoading,
-    error: itemsError
+    error: itemsError,
+    refetch: refetchItems
   } = useQuery<TaskTemplateItem[]>({
     queryKey: ["/api/task-templates", selectedTemplate?.id, "items"],
     enabled: !!selectedTemplate,
     initialData: [] as TaskTemplateItem[],
     queryFn: async () => {
       if (!selectedTemplate) return [] as TaskTemplateItem[];
+      console.log(`Fetching items for template ID: ${selectedTemplate.id}`);
       const response = await apiRequest("GET", `/api/task-templates/${selectedTemplate.id}/items`);
+      console.log("Items response:", response);
       if (response && Array.isArray(response)) {
         return response as TaskTemplateItem[];
       }
       return [] as TaskTemplateItem[];
-    }
+    },
+    refetchOnWindowFocus: false
   });
 
   // Template form
@@ -306,16 +310,14 @@ export default function TemplatesPage() {
       console.log("Template item creation result:", result);
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Template item created successfully:", data);
       toast({
         title: "Success",
         description: "Template item created successfully",
       });
-      if (selectedTemplate) {
-        queryClient.invalidateQueries({ 
-          queryKey: ["/api/task-templates", selectedTemplate.id, "items"] 
-        });
-      }
+      
+      // Close dialog and reset form
       setIsCreateItemOpen(false);
       templateItemForm.reset({
         title: "",
@@ -325,6 +327,17 @@ export default function TemplatesPage() {
         daysFromStart: 0,
         assignedTo: undefined,
       });
+      
+      // Manually refetch items instead of just invalidating cache
+      if (selectedTemplate) {
+        console.log("Refetching items after creation");
+        // First invalidate the cache
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/task-templates", selectedTemplate.id, "items"] 
+        });
+        // Then explicitly refetch
+        setTimeout(() => refetchItems(), 500);
+      }
     },
     onError: (error: Error) => {
       console.error("Template item creation error:", error);
@@ -346,20 +359,29 @@ export default function TemplatesPage() {
       console.log("Updating with formatted data:", formattedData);
       return await apiRequest("PATCH", `/api/task-template-items/${id}`, formattedData);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Template item updated successfully:", data);
       toast({
         title: "Success",
         description: "Template item updated successfully",
       });
-      if (selectedTemplate) {
-        queryClient.invalidateQueries({ 
-          queryKey: ["/api/task-templates", selectedTemplate.id, "items"] 
-        });
-      }
+      
+      // Close dialog and reset form states
       setIsCreateItemOpen(false);
       setIsEditItem(false);
       setSelectedItem(null);
       templateItemForm.reset();
+      
+      // Manually refetch items instead of just invalidating cache
+      if (selectedTemplate) {
+        console.log("Refetching items after update");
+        // First invalidate the cache
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/task-templates", selectedTemplate.id, "items"] 
+        });
+        // Then explicitly refetch
+        setTimeout(() => refetchItems(), 500);
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -374,15 +396,22 @@ export default function TemplatesPage() {
     mutationFn: async (id: number) => {
       return await apiRequest("DELETE", `/api/task-template-items/${id}`);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Template item deleted successfully:", data);
       toast({
         title: "Success",
         description: "Template item deleted successfully",
       });
+      
+      // Manually refetch items instead of just invalidating cache
       if (selectedTemplate) {
+        console.log("Refetching items after deletion");
+        // First invalidate the cache
         queryClient.invalidateQueries({ 
           queryKey: ["/api/task-templates", selectedTemplate.id, "items"] 
         });
+        // Then explicitly refetch
+        setTimeout(() => refetchItems(), 500);
       }
     },
     onError: (error: Error) => {
@@ -479,7 +508,17 @@ export default function TemplatesPage() {
 
   // Function to handle template selection
   const handleTemplateSelect = (template: TaskTemplate) => {
+    console.log("Selected template:", template);
     setSelectedTemplate(template);
+    
+    // Force refetch of items for this template
+    setTimeout(() => {
+      console.log("Refreshing items for newly selected template");
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/task-templates", template.id, "items"] 
+      });
+      refetchItems();
+    }, 100);
   };
 
   // Function to confirm template deletion
@@ -956,7 +995,12 @@ export default function TemplatesPage() {
                 <div className="py-8 text-center text-muted-foreground">
                   Loading tasks...
                 </div>
-              ) : templateItems && Array.isArray(templateItems) && templateItems.length > 0 ? (
+              ) : (() => {
+                console.log("Rendering template items section. Items:", templateItems);
+                console.log("Is array:", Array.isArray(templateItems));
+                console.log("Length:", templateItems?.length || 0);
+                return templateItems && Array.isArray(templateItems) && templateItems.length > 0;
+              })() ? (
                 <Table>
                   <TableCaption>
                     Tasks sorted by days from project start
