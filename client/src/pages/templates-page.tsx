@@ -111,9 +111,11 @@ export default function TemplatesPage() {
   } = useQuery<TaskTemplateItem[]>({
     queryKey: ["/api/task-templates", selectedTemplate?.id, "items"],
     enabled: !!selectedTemplate,
+    initialData: [] as TaskTemplateItem[],
     queryFn: async () => {
-      if (!selectedTemplate) return [];
-      return await apiRequest("GET", `/api/task-templates/${selectedTemplate.id}/items`);
+      if (!selectedTemplate) return [] as TaskTemplateItem[];
+      const response = await apiRequest("GET", `/api/task-templates/${selectedTemplate.id}/items`);
+      return (response || []) as TaskTemplateItem[];
     }
   });
 
@@ -777,7 +779,7 @@ export default function TemplatesPage() {
                 <div className="py-8 text-center text-muted-foreground">
                   Loading tasks...
                 </div>
-              ) : templateItems && templateItems.length > 0 ? (
+              ) : templateItems && Array.isArray(templateItems) && templateItems.length > 0 ? (
                 <Table>
                   <TableCaption>
                     Tasks sorted by days from project start
@@ -792,7 +794,7 @@ export default function TemplatesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {templateItems.map((item) => (
+                    {templateItems.map((item: TaskTemplateItem) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
                           {item.title}
