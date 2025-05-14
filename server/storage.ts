@@ -47,6 +47,23 @@ export interface IStorage {
   getActivityLogsByDeal(dealId: number, limit: number): Promise<ActivityLog[]>;
   createActivityLog(log: InsertActivityLog): Promise<ActivityLog>;
   
+  // Task Template operations
+  getTaskTemplate(id: number): Promise<TaskTemplate | undefined>;
+  getTaskTemplates(): Promise<TaskTemplate[]>;
+  getDefaultTaskTemplate(): Promise<TaskTemplate | undefined>;
+  createTaskTemplate(template: InsertTaskTemplate): Promise<TaskTemplate>;
+  updateTaskTemplate(id: number, template: Partial<InsertTaskTemplate>): Promise<TaskTemplate | undefined>;
+  deleteTaskTemplate(id: number): Promise<boolean>;
+  
+  // Task Template Item operations
+  getTaskTemplateItems(templateId: number): Promise<TaskTemplateItem[]>;
+  createTaskTemplateItem(item: InsertTaskTemplateItem): Promise<TaskTemplateItem>;
+  updateTaskTemplateItem(id: number, item: Partial<InsertTaskTemplateItem>): Promise<TaskTemplateItem | undefined>;
+  deleteTaskTemplateItem(id: number): Promise<boolean>;
+  
+  // Apply template to deal (create tasks from template)
+  applyTemplateToProject(templateId: number, dealId: number): Promise<Task[]>;
+  
   // Session store
   sessionStore: Store;
 }

@@ -170,18 +170,78 @@ export const insertActivityLogSchema = createInsertSchema(activityLogs).pick({
   details: true,
 });
 
+// Task Template model
+export const taskTemplates = pgTable("task_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: integer("created_by").notNull(),
+});
+
+export const insertTaskTemplateSchema = createInsertSchema(taskTemplates).pick({
+  name: true,
+  description: true,
+  isDefault: true,
+  createdBy: true,
+});
+
+// Task Template Item model
+export const taskTemplateItems = pgTable("task_template_items", {
+  id: serial("id").primaryKey(),
+  templateId: integer("template_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  phase: text("phase").notNull(),
+  category: text("category").notNull(),
+  daysFromStart: integer("days_from_start").notNull(), // Days from project start date
+  assignedTo: integer("assigned_to"),
+});
+
+export const insertTaskTemplateItemSchema = createInsertSchema(taskTemplateItems).pick({
+  templateId: true,
+  title: true,
+  description: true,
+  phase: true,
+  category: true,
+  daysFromStart: true,
+  assignedTo: true,
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   assignedTasks: many(tasks, { relationName: "user_tasks" }),
   uploadedDocuments: many(documents),
   createdRequests: many(requests),
   activityLogs: many(activityLogs),
+  createdTaskTemplates: many(taskTemplates),
+  assignedTemplateItems: many(taskTemplateItems),
 }));
 
 export const dealsRelations = relations(deals, ({ many }) => ({
   tasks: many(tasks),
   raciMatrices: many(raciMatrix),
   activityLogs: many(activityLogs),
+}));
+
+export const taskTemplatesRelations = relations(taskTemplates, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [taskTemplates.createdBy],
+    references: [users.id],
+  }),
+  items: many(taskTemplateItems),
+}));
+
+export const taskTemplateItemsRelations = relations(taskTemplateItems, ({ one }) => ({
+  template: one(taskTemplates, {
+    fields: [taskTemplateItems.templateId],
+    references: [taskTemplates.id],
+  }),
+  assignee: one(users, {
+    fields: [taskTemplateItems.assignedTo],
+    references: [users.id],
+  }),
 }));
 
 export const tasksRelations = relations(tasks, ({ one, many }) => ({
@@ -267,6 +327,12 @@ export type InsertRaciMatrix = z.infer<typeof insertRaciMatrixSchema>;
 
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+
+export type TaskTemplate = typeof taskTemplates.$inferSelect;
+export type InsertTaskTemplate = z.infer<typeof insertTaskTemplateSchema>;
+
+export type TaskTemplateItem = typeof taskTemplateItems.$inferSelect;
+export type InsertTaskTemplateItem = z.infer<typeof insertTaskTemplateItemSchema>;
 
 // Enums for consistent reference
 export const UserRoles = {
