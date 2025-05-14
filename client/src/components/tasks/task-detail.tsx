@@ -452,14 +452,14 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                         <SelectValue placeholder="Select phase" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="loi_signing">LOI Signing & DD Kickoff</SelectItem>
-                        <SelectItem value="planning_initial">Planning & Initial Information Requests</SelectItem>
-                        <SelectItem value="document_review">Document Review & Tracker Updates</SelectItem>
-                        <SelectItem value="mid_phase_review">Mid-Phase Review</SelectItem>
-                        <SelectItem value="deep_dives">Deep Dives & Secondary Requests</SelectItem>
-                        <SelectItem value="final_risk_review">Final Risk Review & Negotiation</SelectItem>
-                        <SelectItem value="deal_closing">Deal Closing Preparation</SelectItem>
-                        <SelectItem value="post_close">Post-Close Integration Planning</SelectItem>
+                        <SelectItem value={TaskPhases.LOI_SIGNING}>LOI Signing & DD Kickoff</SelectItem>
+                        <SelectItem value={TaskPhases.PLANNING_INITIAL}>Planning & Initial Information Requests</SelectItem>
+                        <SelectItem value={TaskPhases.DOCUMENT_REVIEW}>Document Review & Tracker Updates</SelectItem>
+                        <SelectItem value={TaskPhases.MID_PHASE_REVIEW}>Mid-Phase Review</SelectItem>
+                        <SelectItem value={TaskPhases.DEEP_DIVES}>Deep Dives & Secondary Requests</SelectItem>
+                        <SelectItem value={TaskPhases.FINAL_RISK_REVIEW}>Final Risk Review & Negotiation</SelectItem>
+                        <SelectItem value={TaskPhases.DEAL_CLOSING}>Deal Closing Preparation</SelectItem>
+                        <SelectItem value={TaskPhases.POST_CLOSE}>Post-Close Integration Planning</SelectItem>
                         
                         {/* Display custom phases */}
                         {customPhases.length > 0 && <SelectSeparator />}
@@ -472,14 +472,14 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                     </Select>
                   ) : (
                     <div className="text-sm py-1.5">
-                      {task.phase === "loi_signing" ? "LOI Signing & DD Kickoff" : 
-                       task.phase === "planning_initial" ? "Planning & Initial Information Requests" : 
-                       task.phase === "document_review" ? "Document Review & Tracker Updates" :
-                       task.phase === "mid_phase_review" ? "Mid-Phase Review" :
-                       task.phase === "deep_dives" ? "Deep Dives & Secondary Requests" :
-                       task.phase === "final_risk_review" ? "Final Risk Review & Negotiation" :
-                       task.phase === "deal_closing" ? "Deal Closing Preparation" :
-                       task.phase === "post_close" ? "Post-Close Integration Planning" :
+                      {task.phase === TaskPhases.LOI_SIGNING ? "LOI Signing & DD Kickoff" : 
+                       task.phase === TaskPhases.PLANNING_INITIAL ? "Planning & Initial Information Requests" : 
+                       task.phase === TaskPhases.DOCUMENT_REVIEW ? "Document Review & Tracker Updates" :
+                       task.phase === TaskPhases.MID_PHASE_REVIEW ? "Mid-Phase Review" :
+                       task.phase === TaskPhases.DEEP_DIVES ? "Deep Dives & Secondary Requests" :
+                       task.phase === TaskPhases.FINAL_RISK_REVIEW ? "Final Risk Review & Negotiation" :
+                       task.phase === TaskPhases.DEAL_CLOSING ? "Deal Closing Preparation" :
+                       task.phase === TaskPhases.POST_CLOSE ? "Post-Close Integration Planning" :
                        // Handle custom phases
                        customPhases.includes(task.phase) ? 
                          task.phase.charAt(0).toUpperCase() + task.phase.slice(1).replace(/_/g, ' ') : 
@@ -501,12 +501,12 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="operating_team">Operating Team</SelectItem>
-                        <SelectItem value="seller_broker">Seller / Broker</SelectItem>
-                        <SelectItem value="ir_bank">IR / Bank</SelectItem>
-                        <SelectItem value="legal">Legal</SelectItem>
-                        <SelectItem value="financial">Financial</SelectItem>
-                        <SelectItem value="investment_committee">Investment Committee</SelectItem>
+                        <SelectItem value={TaskCategories.OPERATING_TEAM}>Operating Team</SelectItem>
+                        <SelectItem value={TaskCategories.SELLER_BROKER}>Seller / Broker</SelectItem>
+                        <SelectItem value={TaskCategories.IR_BANK}>IR / Bank</SelectItem>
+                        <SelectItem value={TaskCategories.LEGAL}>Legal</SelectItem>
+                        <SelectItem value={TaskCategories.FINANCIAL}>Financial</SelectItem>
+                        <SelectItem value={TaskCategories.INVESTMENT_COMMITTEE}>Investment Committee</SelectItem>
                         
                         {/* Display custom categories */}
                         {customCategories.length > 0 && <Separator className="my-1" />}
@@ -519,12 +519,12 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                     </Select>
                   ) : (
                     <div className="text-sm py-1.5">
-                      {task.category === "operating_team" ? "Operating Team" :
-                       task.category === "seller_broker" ? "Seller / Broker" :
-                       task.category === "ir_bank" ? "IR / Bank" :
-                       task.category === "legal" ? "Legal" :
-                       task.category === "financial" ? "Financial" :
-                       task.category === "investment_committee" ? "Investment Committee" :
+                      {task.category === TaskCategories.OPERATING_TEAM ? "Operating Team" :
+                       task.category === TaskCategories.SELLER_BROKER ? "Seller / Broker" :
+                       task.category === TaskCategories.IR_BANK ? "IR / Bank" :
+                       task.category === TaskCategories.LEGAL ? "Legal" :
+                       task.category === TaskCategories.FINANCIAL ? "Financial" :
+                       task.category === TaskCategories.INVESTMENT_COMMITTEE ? "Investment Committee" :
                        // Handle custom categories
                        customCategories.includes(task.category) ? 
                         task.category.charAt(0).toUpperCase() + task.category.slice(1).replace(/_/g, ' ') : 
