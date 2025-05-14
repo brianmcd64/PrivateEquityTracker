@@ -1,4 +1,14 @@
-import { User, InsertUser, Deal, InsertDeal, Task, InsertTask, Document, InsertDocument, Request, InsertRequest, RaciMatrix, InsertRaciMatrix, ActivityLog, InsertActivityLog } from "@shared/schema";
+import { 
+  User, InsertUser, 
+  Deal, InsertDeal, 
+  Task, InsertTask, 
+  Document, InsertDocument, 
+  Request, InsertRequest, 
+  RaciMatrix, InsertRaciMatrix, 
+  ActivityLog, InsertActivityLog,
+  TaskTemplate, InsertTaskTemplate,
+  TaskTemplateItem, InsertTaskTemplateItem
+} from "@shared/schema";
 import session from "express-session";
 import { Store } from "express-session";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -314,6 +324,155 @@ export class DatabaseStorage implements IStorage {
   async createActivityLog(insertLog: InsertActivityLog): Promise<ActivityLog> {
     const [log] = await db.insert(schema.activityLogs).values(insertLog).returning();
     return log;
+  }
+
+  // Task Template operations
+  async getTaskTemplate(id: number): Promise<TaskTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(schema.taskTemplates)
+      .where(eq(schema.taskTemplates.id, id));
+    
+    return template;
+  }
+  
+  async getTaskTemplates(): Promise<TaskTemplate[]> {
+    return await db
+      .select()
+      .from(schema.taskTemplates)
+      .orderBy(schema.taskTemplates.name);
+  }
+  
+  async getDefaultTaskTemplate(): Promise<TaskTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(schema.taskTemplates)
+      .where(eq(schema.taskTemplates.isDefault, true))
+      .limit(1);
+    
+    return template;
+  }
+  
+  async createTaskTemplate(template: InsertTaskTemplate): Promise<TaskTemplate> {
+    const [newTemplate] = await db
+      .insert(schema.taskTemplates)
+      .values(template)
+      .returning();
+    
+    return newTemplate;
+  }
+  
+  async updateTaskTemplate(id: number, templateUpdate: Partial<InsertTaskTemplate>): Promise<TaskTemplate | undefined> {
+    const [updatedTemplate] = await db
+      .update(schema.taskTemplates)
+      .set(templateUpdate)
+      .where(eq(schema.taskTemplates.id, id))
+      .returning();
+    
+    return updatedTemplate;
+  }
+  
+  async deleteTaskTemplate(id: number): Promise<boolean> {
+    // First, delete all template items
+    await db
+      .delete(schema.taskTemplateItems)
+      .where(eq(schema.taskTemplateItems.templateId, id));
+    
+    // Then delete the template
+    const result = await db
+      .delete(schema.taskTemplates)
+      .where(eq(schema.taskTemplates.id, id));
+    
+    return result.rowCount > 0;
+  }
+  
+  // Task Template Item operations
+  async getTaskTemplateItems(templateId: number): Promise<TaskTemplateItem[]> {
+    return await db
+      .select()
+      .from(schema.taskTemplateItems)
+      .where(eq(schema.taskTemplateItems.templateId, templateId))
+      .orderBy(schema.taskTemplateItems.daysFromStart);
+  }
+  
+  async createTaskTemplateItem(item: InsertTaskTemplateItem): Promise<TaskTemplateItem> {
+    const [newItem] = await db
+      .insert(schema.taskTemplateItems)
+      .values(item)
+      .returning();
+    
+    return newItem;
+  }
+  
+  async updateTaskTemplateItem(id: number, itemUpdate: Partial<InsertTaskTemplateItem>): Promise<TaskTemplateItem | undefined> {
+    const [updatedItem] = await db
+      .update(schema.taskTemplateItems)
+      .set(itemUpdate)
+      .where(eq(schema.taskTemplateItems.id, id))
+      .returning();
+    
+    return updatedItem;
+  }
+  
+  async deleteTaskTemplateItem(id: number): Promise<boolean> {
+    const result = await db
+      .delete(schema.taskTemplateItems)
+      .where(eq(schema.taskTemplateItems.id, id));
+    
+    return result.rowCount > 0;
+  }
+  
+  // Apply template to a deal (creates tasks from template)
+  async applyTemplateToProject(templateId: number, dealId: number): Promise<Task[]> {
+    // Get the template
+    const template = await this.getTaskTemplate(templateId);
+    if (!template) {
+      throw new Error("Template not found");
+    }
+    
+    // Get the deal to access its start date
+    const deal = await this.getDeal(dealId);
+    if (!deal) {
+      throw new Error("Deal not found");
+    }
+    
+    // Get all template items
+    const templateItems = await this.getTaskTemplateItems(templateId);
+    
+    // Create tasks from template items
+    const createdTasks: Task[] = [];
+    
+    for (const item of templateItems) {
+      // Calculate due date based on deal start date and days from start
+      let dueDate: Date | null = null;
+      
+      if (deal.startDate) {
+        const startDate = new Date(deal.startDate);
+        dueDate = new Date(startDate);
+        dueDate.setDate(startDate.getDate() + item.daysFromStart);
+      }
+      
+      // Create the task with the calculated due date
+      const taskData: InsertTask = {
+        dealId,
+        title: item.title,
+        description: item.description || null,
+        phase: item.phase,
+        category: item.category,
+        status: schema.TaskStatuses.NOT_STARTED,
+        assignedTo: item.assignedTo || null,
+      };
+      
+      // Only add the dueDate if it's not null
+      if (dueDate) {
+        taskData.dueDate = dueDate.toISOString();
+      }
+      
+      const task = await this.createTask(taskData);
+      createdTasks.push(task);
+    }
+    
+    return createdTasks;
   }
 }
 
