@@ -472,6 +472,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Task Template Routes
   // ============================
   
+  // Import template from CSV
+  app.post("/api/task-templates/import", isAuthenticated, isDealLead, async (req, res) => {
+    try {
+      // Check if file was uploaded
+      if (!req.files || !req.files.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      // Get the uploaded file
+      const file = req.files.file as fileUpload.UploadedFile;
+      
+      // Check if it's a CSV file
+      if (file.mimetype !== "text/csv" && !file.name.endsWith(".csv")) {
+        return res.status(400).json({ message: "File must be a CSV" });
+      }
+      
+      // Get template name and description from request body
+      const name = req.body.name;
+      const description = req.body.description || "";
+      
+      if (!name) {
+        return res.status(400).json({ message: "Template name is required" });
+      }
+      
+      console.log(`Processing CSV import for template: ${name}`);
+      
+      // Parse the CSV file
+      const items = await parseCsvFromFile(file.tempFilePath);
+      
+      if (items.length === 0) {
+        return res.status(400).json({ message: "CSV file must contain at least one task" });
+      }
+      
+      console.log(`Parsed ${items.length} tasks from CSV`);
+      
+      // Create the template
+      const template = await storage.createTaskTemplate({
+        name,
+        description,
+        createdBy: req.user!.id,
+        isDefault: false
+      });
+      
+      console.log(`Created template with ID: ${template.id}`);
+      
+      // Convert items to template items
+      const templateItems = convertToTemplateItems(items, template.id);
+      
+      // Add items to the template
+      const createdItems = [];
+      for (const item of templateItems) {
+        const createdItem = await storage.createTaskTemplateItem(item);
+        createdItems.push(createdItem);
+      }
+      
+      console.log(`Added ${createdItems.length} items to template`);
+      
+      // Clean up temp file
+      fs.unlink(file.tempFilePath, (err) => {
+        if (err) console.error(`Error deleting temp file: ${err.message}`);
+      });
+      
+      // Log activity
+      await storage.createActivityLog({
+        dealId: 0, // Not deal-specific
+        userId: req.user!.id,
+        action: "imported",
+        entityType: "task_template",
+        entityId: template.id,
+        details: `Imported template from CSV: ${template.name} with ${createdItems.length} tasks`
+      });
+      
+      // Return the created template with items
+      res.status(201).json({
+        template,
+        items: createdItems
+      });
+    } catch (error) {
+      console.error("CSV import error:", error);
+      
+      // Clean up temp file if it exists
+      if (req.files && req.files.file) {
+        const file = req.files.file as fileUpload.UploadedFile;
+        fs.unlink(file.tempFilePath, (err) => {
+          if (err) console.error(`Error deleting temp file: ${err.message}`);
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "Error importing CSV", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   // Get all task templates
   app.get("/api/task-templates", isAuthenticated, async (req, res) => {
     const templates = await storage.getTaskTemplates();

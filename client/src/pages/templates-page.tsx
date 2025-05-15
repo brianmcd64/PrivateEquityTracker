@@ -11,6 +11,7 @@ import {
   insertTaskTemplateSchema, 
   insertTaskTemplateItemSchema 
 } from "@shared/schema";
+import { TemplateCsvImport } from "@/components/templates/template-csv-import";
 import { Layout } from "@/components/layout";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -96,6 +97,7 @@ export default function TemplatesPage() {
   const [isEditTemplate, setIsEditTemplate] = useState(false);
   const [isEditItem, setIsEditItem] = useState(false);
   const [selectedItem, setSelectedItem] = useState<TaskTemplateItem | null>(null);
+  const [isImportCsvOpen, setIsImportCsvOpen] = useState(false);
 
   // Fetch templates
   const {
