@@ -2,6 +2,10 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, seedAdmin } from "./auth";
+import fileUpload from "express-fileupload";
+import { parseCsvFromFile, convertToTemplateItems } from "./csv-parser";
+import fs from "fs";
+import path from "path";
 import { 
   insertDealSchema, 
   insertTaskSchema, 
@@ -61,6 +65,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   try {
     // Setup authentication
     await setupAuth(app);
+    
+    // Setup file upload middleware
+    app.use(fileUpload({
+      createParentPath: true,
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max file size
+      abortOnLimit: true,
+      useTempFiles: true,
+      tempFileDir: './tmp/'
+    }));
+    
+    // Create temp directory if it doesn't exist
+    const tempDir = path.resolve('./tmp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
     
     // Seed admin user
     await seedAdmin();
