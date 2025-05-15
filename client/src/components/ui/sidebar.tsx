@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, Link, useNavigate } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -33,7 +33,7 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
     return storedDeal ? JSON.parse(storedDeal) : null;
   });
 
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   // Fetch all deals
   const { data: deals = [], isLoading } = useQuery<Deal[]>({
@@ -113,7 +113,7 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
                 onClick={(e) => {
                   if (!activeDeal && item.path !== "/deals") {
                     e.preventDefault();
-                    navigate("/deals");
+                    setLocation("/deals");
                   }
                 }}
               >
