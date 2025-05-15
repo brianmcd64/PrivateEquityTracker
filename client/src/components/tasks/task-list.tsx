@@ -366,14 +366,13 @@ export function TaskList({
               onChange={(e) => setPhaseFilter(e.target.value)}
             >
               <option value="">All Phases</option>
-              <option value={TaskPhases.LOI_SIGNING}>LOI Signing & DD Kickoff</option>
-              <option value={TaskPhases.PLANNING_INITIAL}>Planning & Initial Information Requests</option>
-              <option value={TaskPhases.DOCUMENT_REVIEW}>Document Review & Tracker Updates</option>
-              <option value={TaskPhases.MID_PHASE_REVIEW}>Mid-Phase Review</option>
-              <option value={TaskPhases.DEEP_DIVES}>Deep Dives & Secondary Requests</option>
-              <option value={TaskPhases.FINAL_RISK_REVIEW}>Final Risk Review & Negotiation</option>
-              <option value={TaskPhases.DEAL_CLOSING}>Deal Closing Preparation</option>
-              <option value={TaskPhases.POST_CLOSE}>Post-Close Integration Planning</option>
+              {Object.entries(TaskPhases).map(([key, value]) => (
+                <option key={value} value={value}>
+                  {key.split('_').map(word => 
+                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                  ).join(' ')}
+                </option>
+              ))}
               {customPhases.map(phase => (
                 <option key={phase} value={phase}>{phase.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase())}</option>
               ))}
