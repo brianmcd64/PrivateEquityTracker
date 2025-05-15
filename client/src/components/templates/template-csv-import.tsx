@@ -9,10 +9,14 @@ import { useMutation } from "@tanstack/react-query";
 
 export function TemplateCsvImport({ 
   open, 
-  onOpenChange 
+  onOpenChange,
+  onSuccess,
+  onError
 }: { 
-  open: boolean; 
-  onOpenChange: (open: boolean) => void;
+  open?: boolean; 
+  onOpenChange?: (open: boolean) => void;
+  onSuccess?: (templateId: number) => void;
+  onError?: (error: Error) => void;
 }) {
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);

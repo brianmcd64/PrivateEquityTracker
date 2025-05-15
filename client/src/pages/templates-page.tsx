@@ -15,6 +15,7 @@ import { TemplateCsvImport } from "@/components/templates/template-csv-import";
 import { Layout } from "@/components/layout";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+
 import { 
   Card, 
   CardContent, 
@@ -62,7 +63,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Upload } from "lucide-react";
 
 // Form schema for template creation
 const templateFormSchema = insertTaskTemplateSchema.extend({
@@ -691,19 +692,57 @@ export default function TemplatesPage() {
                 <CardTitle>Templates</CardTitle>
                 <CardDescription>Select a template to manage</CardDescription>
               </div>
-              <Dialog open={isCreateTemplateOpen} onOpenChange={setIsCreateTemplateOpen}>
-                <DialogTrigger asChild>
-                  <Button 
-                    size="sm" 
-                    onClick={() => {
-                      setIsEditTemplate(false);
-                      templateForm.reset();
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-1" /> New
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[500px]">
+              <div className="flex space-x-2">
+                <Dialog open={isImportCsvOpen} onOpenChange={setIsImportCsvOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      size="sm"
+                      variant="outline" 
+                    >
+                      <Upload className="h-4 w-4 mr-1" /> Import
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle>Import Tasks from CSV</DialogTitle>
+                      <DialogDescription>
+                        Upload a CSV file to create a new template with tasks.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <TemplateCsvImport 
+                        onSuccess={(templateId) => {
+                          setIsImportCsvOpen(false);
+                          queryClient.invalidateQueries({ queryKey: ['/api/task-templates'] });
+                          toast({
+                            title: "Import completed",
+                            description: "Template created successfully from CSV!",
+                          });
+                        }}
+                        onError={(error) => {
+                          toast({
+                            variant: "destructive",
+                            title: "Import failed",
+                            description: error.message || "Failed to import CSV file",
+                          });
+                        }}
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <Dialog open={isCreateTemplateOpen} onOpenChange={setIsCreateTemplateOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        setIsEditTemplate(false);
+                        templateForm.reset();
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> New
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
                     <DialogTitle>
                       {isEditTemplate ? "Edit Template" : "Create New Template"}
@@ -808,6 +847,7 @@ export default function TemplatesPage() {
                   </Form>
                 </DialogContent>
               </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[500px] pr-4">
