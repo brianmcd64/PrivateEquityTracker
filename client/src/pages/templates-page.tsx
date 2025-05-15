@@ -702,34 +702,26 @@ export default function TemplatesPage() {
                       <Upload className="h-4 w-4 mr-1" /> Import
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                      <DialogTitle>Import Tasks from CSV</DialogTitle>
-                      <DialogDescription>
-                        Upload a CSV file to create a new template with tasks.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                      <TemplateCsvImport 
-                        onSuccess={(templateId) => {
-                          setIsImportCsvOpen(false);
-                          queryClient.invalidateQueries({ queryKey: ['/api/task-templates'] });
-                          toast({
-                            title: "Import completed",
-                            description: "Template created successfully from CSV!",
-                          });
-                        }}
-                        onError={(error) => {
-                          toast({
-                            variant: "destructive",
-                            title: "Import failed",
-                            description: error.message || "Failed to import CSV file",
-                          });
-                        }}
-                      />
-                    </div>
-                  </DialogContent>
                 </Dialog>
+                
+                <TemplateCsvImport 
+                  open={isImportCsvOpen}
+                  onOpenChange={setIsImportCsvOpen}
+                  onSuccess={(templateId) => {
+                    queryClient.invalidateQueries({ queryKey: ['/api/task-templates'] });
+                    toast({
+                      title: "Import completed",
+                      description: "Template created successfully from CSV!",
+                    });
+                  }}
+                  onError={(error) => {
+                    toast({
+                      variant: "destructive",
+                      title: "Import failed",
+                      description: error.message || "Failed to import CSV file",
+                    });
+                  }}
+                />
                 <Dialog open={isCreateTemplateOpen} onOpenChange={setIsCreateTemplateOpen}>
                   <DialogTrigger asChild>
                     <Button 
