@@ -187,8 +187,8 @@ export default function ChecklistPage() {
     queryKey: ["/api/deals"],
   });
 
-  // Filter for active deals only
-  const activeDeals = allDeals.filter(deal => deal.status === "active");
+  // Filter for active and open deals
+  const activeDeals = allDeals.filter(deal => deal.status === "active" || deal.status === "open");
   
   // If no deal ID yet, show deal selection interface
   if (!dealId) {
