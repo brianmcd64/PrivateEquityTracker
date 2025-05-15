@@ -65,14 +65,23 @@ export default function ChecklistPage() {
   
   // Get active deal from localStorage on component mount
   useEffect(() => {
+    console.log("Checking localStorage for activeDeal");
     const storedDeal = localStorage.getItem("activeDeal");
+    console.log("StoredDeal from localStorage:", storedDeal);
+    
     if (storedDeal) {
       try {
         const parsedDeal = JSON.parse(storedDeal);
-        setDealId(parsedDeal.id);
-        setDealName(parsedDeal.name);
+        console.log("Parsed deal from localStorage:", parsedDeal);
+        
+        // Only set if we have a valid ID
+        if (parsedDeal && parsedDeal.id) {
+          console.log("Setting deal ID to:", parsedDeal.id);
+          setDealId(parsedDeal.id);
+          setDealName(parsedDeal.name || "");
+        }
       } catch (e) {
-        console.error("Failed to parse active deal from localStorage");
+        console.error("Failed to parse active deal from localStorage", e);
         // Don't redirect, let the component handle the null dealId case
       }
     }
@@ -88,7 +97,16 @@ export default function ChecklistPage() {
   // Update state when deal data is loaded
   useEffect(() => {
     if (deal) {
+      console.log("Deal data loaded from API:", deal);
       setDealName(deal.name);
+      
+      // Update localStorage with the latest deal data
+      console.log("Updating localStorage with latest deal data for ID:", deal.id);
+      localStorage.setItem("activeDeal", JSON.stringify({
+        id: deal.id,
+        name: deal.name,
+        status: deal.status
+      }));
     }
   }, [deal]);
   
