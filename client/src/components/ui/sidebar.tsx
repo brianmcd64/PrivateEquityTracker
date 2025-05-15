@@ -28,12 +28,16 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
   const { user } = useAuth();
   const [activeDealId, setActiveDealId] = useState<number | null>(null);
   const [dealsOpen, setDealsOpen] = useState(true);
-  
+  const [activeDeal, setActiveDeal] = useState<Deal | null>(() => {
+    const storedDeal = localStorage.getItem("activeDeal");
+    return storedDeal ? JSON.parse(storedDeal) : null;
+  });
+
   // Fetch all deals
   const { data: deals = [], isLoading } = useQuery<Deal[]>({
     queryKey: ["/api/deals"],
   });
-  
+
   // Filter for active deals only
   const activeDeals = deals.filter(deal => deal.status === "active");
 
@@ -43,7 +47,7 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
       onClose();
     }
   }, [location, isMobile, onClose]);
-  
+
   // Load active deal from localStorage
   useEffect(() => {
     const storedDealId = localStorage.getItem("activeDealId");
@@ -54,7 +58,7 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
       const firstDeal = activeDeals[0];
       setActiveDealId(firstDeal.id);
       localStorage.setItem("activeDealId", firstDeal.id.toString());
-      
+
       // Also store the full deal object
       localStorage.setItem("activeDeal", JSON.stringify({
         id: firstDeal.id,
@@ -74,11 +78,8 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
     { path: "/templates", label: "Task Templates", icon: <FileText className="h-5 w-5 mr-3 text-neutral-500" /> },
   ];
 
-  const handleDealClick = (dealId: number, deal: Deal) => {
-    setActiveDealId(dealId);
-    localStorage.setItem("activeDealId", dealId.toString());
-    
-    // Also store the full deal object for access from other components
+  const handleDealClick = (deal: Deal) => {
+    setActiveDeal(deal);
     localStorage.setItem("activeDeal", JSON.stringify({
       id: deal.id,
       name: deal.name,
@@ -130,7 +131,7 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
               )}
             </button>
           </div>
-          
+
           {dealsOpen && (
             <div>
               {isLoading ? (
@@ -142,10 +143,10 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
                   {activeDeals.map((deal) => (
                     <li key={deal.id}>
                       <button
-                        onClick={() => handleDealClick(deal.id, deal)}
+                        onClick={() => handleDealClick(deal)}
                         className={cn(
                           "w-full flex items-center px-3 py-2 text-sm font-medium rounded-md",
-                          activeDealId === deal.id
+                          activeDeal?.id === deal.id
                             ? "text-white bg-primary"
                             : "text-neutral-700 hover:bg-neutral-100"
                         )}
@@ -156,7 +157,7 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
                   ))}
                 </ul>
               )}
-              
+
               <div className="mt-3 flex flex-col space-y-2">
                 <Link 
                   href="/deals"
@@ -164,7 +165,7 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
                 >
                   Manage Deals
                 </Link>
-                
+
                 {user?.role === "deal_lead" && (
                   <Link 
                     href="/deals/new"
