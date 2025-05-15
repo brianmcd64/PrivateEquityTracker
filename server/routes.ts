@@ -481,7 +481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get the uploaded file
-      const file = req.files.file as fileUpload.UploadedFile;
+      const file = req.files.file as import('express-fileupload').UploadedFile;
       
       // Check if it's a CSV file
       if (file.mimetype !== "text/csv" && !file.name.endsWith(".csv")) {
@@ -554,7 +554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clean up temp file if it exists
       if (req.files && req.files.file) {
-        const file = req.files.file as fileUpload.UploadedFile;
+        const file = req.files.file as import('express-fileupload').UploadedFile;
         fs.unlink(file.tempFilePath, (err) => {
           if (err) console.error(`Error deleting temp file: ${err.message}`);
         });
