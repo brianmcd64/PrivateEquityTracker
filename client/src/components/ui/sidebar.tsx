@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, Link } from "wouter";
+import { useLocation, Link, useNavigate } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -32,6 +32,8 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
     const storedDeal = localStorage.getItem("activeDeal");
     return storedDeal ? JSON.parse(storedDeal) : null;
   });
+
+  const navigate = useNavigate();
 
   // Fetch all deals
   const { data: deals = [], isLoading } = useQuery<Deal[]>({
@@ -103,12 +105,18 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
             {menuItems.map((item) => (
               <li key={item.path}>
                 <Link 
-                  href={item.path}
-                  className={cn(
-                    "flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-neutral-100 pl-4",
-                    location === item.path && "sidebar-menu-item active bg-blue-50 border-l-3 border-blue-500"
-                  )}
-                >
+                href={activeDeal ? item.path : "/deals"}
+                className={cn(
+                  "flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-neutral-100 pl-4",
+                  location === item.path && "sidebar-menu-item active bg-blue-50 border-l-3 border-blue-500"
+                )}
+                onClick={(e) => {
+                  if (!activeDeal && item.path !== "/deals") {
+                    e.preventDefault();
+                    navigate("/deals");
+                  }
+                }}
+              >
                   {item.icon}
                   {item.label}
                 </Link>
