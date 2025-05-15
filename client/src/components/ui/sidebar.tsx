@@ -28,10 +28,7 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
   const { user } = useAuth();
   const [activeDealId, setActiveDealId] = useState<number | null>(null);
   const [dealsOpen, setDealsOpen] = useState(true);
-  const [activeDeal, setActiveDeal] = useState<Deal | null>(() => {
-    const storedDeal = localStorage.getItem("activeDeal");
-    return storedDeal ? JSON.parse(storedDeal) : null;
-  });
+  const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
 
   const [, setLocation] = useLocation();
 
@@ -40,8 +37,8 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
     queryKey: ["/api/deals"],
   });
 
-  // Filter for active deals only
-  const activeDeals = deals.filter(deal => deal.status === "active");
+  // Filter for active and open deals
+  const activeDeals = deals.filter(deal => deal.status === "active" || deal.status === "open");
 
   useEffect(() => {
     // Close sidebar on route change for mobile
@@ -52,6 +49,20 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
 
   // Load active deal from localStorage
   useEffect(() => {
+    // First check if there's an activeDeal in localStorage
+    const storedDeal = localStorage.getItem("activeDeal");
+    if (storedDeal) {
+      try {
+        const parsedDeal = JSON.parse(storedDeal);
+        setActiveDeal(parsedDeal);
+        setActiveDealId(parsedDeal.id);
+        return; // We already have an active deal, don't override it
+      } catch (e) {
+        console.error("Failed to parse active deal from localStorage");
+      }
+    }
+    
+    // Fallback to checking activeDealId
     const storedDealId = localStorage.getItem("activeDealId");
     if (storedDealId) {
       setActiveDealId(parseInt(storedDealId));
