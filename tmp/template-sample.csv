@@ -1,0 +1,7 @@
+title,description,phase,category,daysFromStart,assignedTo
+Initial Contract Review,Review all contract terms,LOI_SIGNING,LEGAL,0,
+Financial Due Diligence,Conduct thorough financial analysis,PLANNING_INITIAL,FINANCIAL,7,
+Market Analysis,Evaluate market position and competitive landscape,DOCUMENT_REVIEW,FINANCIAL,14,
+Operational Assessment,Review operational capabilities and risks,MID_PHASE_REVIEW,OPERATING_TEAM,21,
+Legal Compliance Check,Ensure all legal requirements are met,FINAL_COMPLETION,LEGAL,28,
+Final Decision Meeting,Present findings to investment committee,CLOSING,INVESTMENT_COMMITTEE,35,

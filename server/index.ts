@@ -1,10 +1,28 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import fileUpload from "express-fileupload";
+import path from "path";
+import fs from "fs";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Configure fileUpload middleware
+// Use import.meta.url for ES modules instead of __dirname
+const currentDir = path.dirname(new URL(import.meta.url).pathname);
+const tempDir = path.join(currentDir, "../tmp");
+// Create the temp directory if it doesn't exist
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
+
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: tempDir,
+  debug: true
+}));
 
 app.use((req, res, next) => {
   const start = Date.now();
