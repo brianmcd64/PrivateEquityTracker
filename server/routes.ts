@@ -475,17 +475,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import template from CSV
   app.post("/api/task-templates/import", isAuthenticated, isDealLead, async (req, res) => {
     try {
+      console.log("CSV import request received");
+      
+      // Detailed request inspection
+      console.log("Request body:", req.body);
+      console.log("Request files:", req.files ? Object.keys(req.files) : "No files");
+      
       // Check if file was uploaded
       if (!req.files || !req.files.file) {
+        console.warn("No file was uploaded in the request");
         return res.status(400).json({ message: "No file uploaded" });
       }
       
       // Get the uploaded file
       const file = req.files.file as import('express-fileupload').UploadedFile;
+      console.log(`File uploaded: ${file.name}, size: ${file.size} bytes, path: ${file.tempFilePath}`);
       
       // Check if it's a CSV file
       if (file.mimetype !== "text/csv" && !file.name.endsWith(".csv")) {
+        console.warn(`Invalid file type: ${file.mimetype}`);
         return res.status(400).json({ message: "File must be a CSV" });
+      }
+      
+      // Ensure the file exists at the temporary path
+      if (!fs.existsSync(file.tempFilePath)) {
+        console.error(`Temp file doesn't exist at path: ${file.tempFilePath}`);
+        return res.status(500).json({ message: "File upload failed - temporary file not found" });
       }
       
       // Get template name and description from request body
@@ -493,71 +508,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const description = req.body.description || "";
       
       if (!name) {
+        console.warn("Template name is missing");
         return res.status(400).json({ message: "Template name is required" });
       }
       
       console.log(`Processing CSV import for template: ${name}`);
       
-      // Parse the CSV file
-      const items = await parseCsvFromFile(file.tempFilePath);
-      
-      if (items.length === 0) {
-        return res.status(400).json({ message: "CSV file must contain at least one task" });
+      try {
+        // Parse the CSV file with added error handling
+        console.log(`Reading CSV file from: ${file.tempFilePath}`);
+        const fileContent = fs.readFileSync(file.tempFilePath, 'utf8');
+        console.log(`File content (first 200 chars): ${fileContent.substring(0, 200)}...`);
+        
+        // Parse the CSV file
+        const items = await parseCsvFromFile(file.tempFilePath);
+        
+        if (items.length === 0) {
+          console.warn("CSV file parsed but contains no valid items");
+          return res.status(400).json({ message: "CSV file must contain at least one valid task" });
+        }
+        
+        console.log(`Parsed ${items.length} tasks from CSV`);
+        console.log("Sample items:", JSON.stringify(items.slice(0, 2)));
+        
+        // Create the template
+        const template = await storage.createTaskTemplate({
+          name,
+          description,
+          createdBy: req.user!.id,
+          isDefault: false
+        });
+        
+        console.log(`Created template with ID: ${template.id}`);
+        
+        // Convert items to template items
+        const templateItems = convertToTemplateItems(items, template.id);
+        
+        // Add items to the template
+        const createdItems = [];
+        for (const item of templateItems) {
+          const createdItem = await storage.createTaskTemplateItem(item);
+          createdItems.push(createdItem);
+        }
+        
+        console.log(`Added ${createdItems.length} items to template`);
+        
+        // Clean up temp file
+        fs.unlink(file.tempFilePath, (err) => {
+          if (err) console.error(`Error deleting temp file: ${err.message}`);
+        });
+        
+        // Log activity
+        await storage.createActivityLog({
+          dealId: 0, // Not deal-specific
+          userId: req.user!.id,
+          action: "imported",
+          entityType: "task_template",
+          entityId: template.id,
+          details: `Imported template from CSV: ${template.name} with ${createdItems.length} tasks`
+        });
+        
+        // Return the created template with items
+        const response = {
+          template,
+          items: createdItems
+        };
+        console.log("CSV import successful, sending response");
+        res.status(201).json(response);
+      } catch (parseError) {
+        console.error("Error parsing CSV file:", parseError);
+        return res.status(400).json({ 
+          message: "Error parsing CSV file", 
+          error: parseError instanceof Error ? parseError.message : "File format is incorrect" 
+        });
       }
-      
-      console.log(`Parsed ${items.length} tasks from CSV`);
-      
-      // Create the template
-      const template = await storage.createTaskTemplate({
-        name,
-        description,
-        createdBy: req.user!.id,
-        isDefault: false
-      });
-      
-      console.log(`Created template with ID: ${template.id}`);
-      
-      // Convert items to template items
-      const templateItems = convertToTemplateItems(items, template.id);
-      
-      // Add items to the template
-      const createdItems = [];
-      for (const item of templateItems) {
-        const createdItem = await storage.createTaskTemplateItem(item);
-        createdItems.push(createdItem);
-      }
-      
-      console.log(`Added ${createdItems.length} items to template`);
-      
-      // Clean up temp file
-      fs.unlink(file.tempFilePath, (err) => {
-        if (err) console.error(`Error deleting temp file: ${err.message}`);
-      });
-      
-      // Log activity
-      await storage.createActivityLog({
-        dealId: 0, // Not deal-specific
-        userId: req.user!.id,
-        action: "imported",
-        entityType: "task_template",
-        entityId: template.id,
-        details: `Imported template from CSV: ${template.name} with ${createdItems.length} tasks`
-      });
-      
-      // Return the created template with items
-      res.status(201).json({
-        template,
-        items: createdItems
-      });
     } catch (error) {
       console.error("CSV import error:", error);
       
       // Clean up temp file if it exists
       if (req.files && req.files.file) {
-        const file = req.files.file as import('express-fileupload').UploadedFile;
-        fs.unlink(file.tempFilePath, (err) => {
-          if (err) console.error(`Error deleting temp file: ${err.message}`);
-        });
+        try {
+          const file = req.files.file as import('express-fileupload').UploadedFile;
+          if (fs.existsSync(file.tempFilePath)) {
+            fs.unlink(file.tempFilePath, (err) => {
+              if (err) console.error(`Error deleting temp file: ${err.message}`);
+            });
+          }
+        } catch (cleanupError) {
+          console.error("Error during file cleanup:", cleanupError);
+        }
       }
       
       res.status(500).json({ 

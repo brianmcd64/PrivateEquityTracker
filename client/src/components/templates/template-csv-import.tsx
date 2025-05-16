@@ -47,6 +47,7 @@ export function TemplateCsvImport({
       }
 
       setIsUploading(true);
+      console.log("Starting CSV upload for template:", templateName);
       
       const formData = new FormData();
       formData.append("file", file);
@@ -54,15 +55,33 @@ export function TemplateCsvImport({
       formData.append("description", templateDesc || "");
       
       try {
+        console.log("Sending CSV file:", file.name, "size:", file.size);
         const response = await fetch("/api/task-templates/import", {
           method: "POST",
           body: formData,
+          credentials: "include", // Include cookies for auth
           // Don't set Content-Type header as the browser will set it with the boundary
         });
         
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Import failed: ${errorText}`);
+          let errorMessage = "Import failed";
+          
+          try {
+            // Try to parse as JSON first
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorData.error || errorMessage;
+          } catch (e) {
+            // If not JSON, try getting text
+            try {
+              const errorText = await response.text();
+              if (errorText) errorMessage = errorText;
+            } catch (textError) {
+              // If that fails too, use status text
+              errorMessage = `${errorMessage}: ${response.status} ${response.statusText}`;
+            }
+          }
+          
+          throw new Error(errorMessage);
         }
         
         return await response.json();

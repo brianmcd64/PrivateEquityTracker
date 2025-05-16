@@ -10,18 +10,25 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Configure fileUpload middleware
-// Use import.meta.url for ES modules instead of __dirname
-const currentDir = path.dirname(new URL(import.meta.url).pathname);
-const tempDir = path.join(currentDir, "../tmp");
+// Create a temp directory for file uploads in the project root
+const tempDir = path.resolve('./tmp');
+console.log("Using temporary directory for file uploads:", tempDir);
+
 // Create the temp directory if it doesn't exist
 if (!fs.existsSync(tempDir)) {
+  console.log("Creating temporary directory:", tempDir);
   fs.mkdirSync(tempDir, { recursive: true });
 }
 
+// Configure express-fileupload with more robust settings
 app.use(fileUpload({
   useTempFiles: true,
   tempFileDir: tempDir,
-  debug: true
+  parseNested: true,
+  debug: true,
+  abortOnLimit: true,
+  responseOnLimit: "File size limit exceeded",
+  fileSize: 5 * 1024 * 1024 // 5MB limit
 }));
 
 app.use((req, res, next) => {
