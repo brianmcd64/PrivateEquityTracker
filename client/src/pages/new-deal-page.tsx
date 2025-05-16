@@ -132,11 +132,13 @@ export default function NewDealPage() {
           console.log(`Applying template ID ${selectedTemplateId} to new deal ID ${createdDeal.id}`);
           try {
             // Direct fetch to the server to apply the template
+            // Need to include credentials to ensure the auth cookie is sent
             const response = await fetch(`/api/deals/${createdDeal.id}/apply-template`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
+              credentials: 'same-origin', // This ensures cookies are sent with the request
               body: JSON.stringify({ templateId: selectedTemplateId }),
             });
             
