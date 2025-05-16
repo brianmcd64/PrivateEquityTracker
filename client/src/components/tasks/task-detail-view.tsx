@@ -96,10 +96,31 @@ function EditTaskDialog({ task, onComplete }: { task: Task, onComplete: () => vo
     },
   });
   
+  // Debug the form submission
+  console.log("Task original values:", {
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    phase: task.phase,
+    category: task.category,
+    dueDate: task.dueDate,
+    assignedTo: task.assignedTo
+  });
+  
   // Update task mutation
   const updateTaskMutation = useMutation({
     mutationFn: async (data: TaskEditValues) => {
-      return apiRequest("PATCH", `/api/tasks/${task.id}`, data);
+      // Log the data being sent
+      console.log("Submitting task update:", data);
+      
+      // Make sure dueDate is in the proper format
+      const formattedData = {
+        ...data,
+        // Keep dueDate as is - it's already a string from the form
+      };
+      
+      console.log("Formatted data for submission:", formattedData);
+      return apiRequest("PATCH", `/api/tasks/${task.id}`, formattedData);
     },
     onSuccess: () => {
       toast({
@@ -117,11 +138,13 @@ function EditTaskDialog({ task, onComplete }: { task: Task, onComplete: () => vo
         onComplete();
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error updating task:", error);
+      // Show more detailed error message if available
+      const errorMsg = error.errors ? JSON.stringify(error.errors) : "Please try again.";
       toast({
         title: "Error updating task",
-        description: "There was an error updating the task. Please try again.",
+        description: `There was an error updating the task: ${errorMsg}`,
         variant: "destructive",
       });
     },
