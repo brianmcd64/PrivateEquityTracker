@@ -65,34 +65,47 @@ export default function NewDealPage() {
     setSelectedTemplateId(templateId);
   }, []);
   
-  // Apply template to deal
-  const applyTemplateMutation = useMutation({
-    mutationFn: async ({ dealId, templateId }: { dealId: number, templateId: number }) => {
-      console.log(`Applying template ID ${templateId} to deal ID ${dealId}`);
-      const response = await apiRequest("POST", `/api/deals/${dealId}/apply-template`, { templateId });
-      console.log("Template application response:", response);
-      return response;
-    },
-    onSuccess: (data, variables) => {
-      console.log("Template applied successfully:", data);
-      toast({
-        title: "Template Applied",
-        description: `Tasks successfully created for deal #${variables.dealId}`,
-      });
+  // Apply template to deal - this will be used directly in onSuccess of createDealMutation
+  const applyTemplate = async (dealId: number, templateId: number) => {
+    console.log(`Directly applying template ID ${templateId} to deal ID ${dealId}`);
+    try {
+      const tasksResponse = await apiRequest(
+        "POST", 
+        `/api/deals/${dealId}/apply-template`, 
+        { templateId }
+      );
+      console.log("Template application response:", tasksResponse);
+      
+      if (Array.isArray(tasksResponse) && tasksResponse.length > 0) {
+        toast({
+          title: "Template Applied",
+          description: `${tasksResponse.length} tasks created from template`,
+        });
+      } else {
+        console.error("Template applied but no tasks were returned:", tasksResponse);
+        toast({
+          title: "Warning",
+          description: "Template applied but no tasks were created",
+          variant: "destructive",
+        });
+      }
+      
+      // Invalidate all relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/deals/${variables.dealId}/tasks`] });
-      navigate("/deals");
-    },
-    onError: (error: Error) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/tasks`] });
+      
+      return tasksResponse;
+    } catch (error) {
       console.error("Failed to apply template:", error);
       toast({
         title: "Error",
-        description: `Failed to apply template: ${error.message}`,
+        description: `Failed to apply template: ${error instanceof Error ? error.message : "Unknown error"}`,
         variant: "destructive",
       });
-      navigate("/deals");
-    },
-  });
+      throw error;
+    }
+  };
   
   // Define deal creation mutation
   const createDealMutation = useMutation<any, Error, InsertDeal>({
@@ -118,34 +131,48 @@ export default function NewDealPage() {
         if (selectedTemplateId) {
           console.log(`Applying template ID ${selectedTemplateId} to new deal ID ${createdDeal.id}`);
           try {
-            // Apply template directly with await to ensure it completes
-            const tasksResponse = await apiRequest(
-              "POST", 
-              `/api/deals/${createdDeal.id}/apply-template`, 
-              { templateId: selectedTemplateId }
-            );
-            
-            console.log("Template application response:", tasksResponse);
-            toast({
-              title: "Deal Created with Tasks",
-              description: `Deal "${createdDeal.name}" created with ${tasksResponse.length} tasks from template.`,
+            // Direct fetch to the server to apply the template
+            const response = await fetch(`/api/deals/${createdDeal.id}/apply-template`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ templateId: selectedTemplateId }),
             });
             
-            // Make sure all related queries are invalidated
+            if (!response.ok) {
+              throw new Error(`Template application failed: ${response.statusText}`);
+            }
+            
+            const tasksResponse = await response.json();
+            console.log("Template application response:", tasksResponse);
+            
+            if (Array.isArray(tasksResponse) && tasksResponse.length > 0) {
+              toast({
+                title: "Deal Created with Tasks",
+                description: `Deal "${createdDeal.name}" created with ${tasksResponse.length} tasks from template.`,
+              });
+            } else {
+              console.warn("Template applied but returned empty task array:", tasksResponse);
+              toast({
+                title: "Deal Created",
+                description: "Deal created, but no tasks were created from the template.",
+              });
+            }
+            
+            // Invalidate all queries related to this deal
             queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
             queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}`] });
             queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}/tasks`] });
-            
-            // Navigate to deals list
-            navigate("/deals");
           } catch (error) {
             console.error("Failed to apply template:", error);
             toast({
               title: "Template Application Error",
-              description: `Deal created but failed to apply template: ${error instanceof Error ? error.message : "Unknown error"}`,
+              description: `Deal created but failed to apply template. Please refresh and check if tasks were created.`,
               variant: "destructive",
             });
-            queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+          } finally {
+            // Always navigate to deals list after deal creation
             navigate("/deals");
           }
         } else {
@@ -335,9 +362,9 @@ export default function NewDealPage() {
                   </Button>
                   <Button 
                     type="submit" 
-                    disabled={createDealMutation.isPending || applyTemplateMutation.isPending}
+                    disabled={createDealMutation.isPending}
                   >
-                    {createDealMutation.isPending || applyTemplateMutation.isPending 
+                    {createDealMutation.isPending 
                       ? "Creating..." 
                       : "Create Deal"}
                   </Button>

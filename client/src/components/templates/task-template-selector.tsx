@@ -60,8 +60,12 @@ export function TaskTemplateSelector({
   
   // Handle template selection change
   const handleSelectionChange = (value: string) => {
+    console.log("Template selection changed to:", value);
     setSelectedValue(value);
-    onTemplateSelect(value && value !== "none" ? parseInt(value, 10) : null);
+    // Convert the value to a number if it's not "none", otherwise pass null
+    const templateId = value && value !== "none" ? parseInt(value, 10) : null;
+    console.log("Notifying parent component of template selection:", templateId);
+    onTemplateSelect(templateId);
   };
   
   // Handle error in loading templates
