@@ -321,44 +321,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/tasks/:id", isAuthenticated, canModifyTask, async (req, res) => {
     try {
       const taskId = parseInt(req.params.id);
-      const taskData = insertTaskSchema.partial().parse(req.body);
       
-      const currentTask = await storage.getTask(taskId);
-      if (!currentTask) {
-        return res.status(404).json({ message: "Task not found" });
-      }
+      // Debug incoming data
+      console.log(`Task update request for task ${taskId}:`, JSON.stringify(req.body, null, 2));
       
-      const updatedTask = await storage.updateTask(taskId, taskData);
-      
-      // Check if status was updated to completed
-      if (taskData.status === TaskStatuses.COMPLETED && currentTask.status !== TaskStatuses.COMPLETED) {
-        // Log completion activity
-        await storage.createActivityLog({
-          dealId: updatedTask!.dealId,
-          userId: req.user!.id,
-          action: "completed",
-          entityType: "task",
-          entityId: updatedTask!.id,
-          details: `Completed task: ${updatedTask!.title}`
+      try {
+        // Create a more lenient schema for updates
+        const taskUpdateSchema = z.object({
+          title: z.string().min(1).optional(),
+          description: z.string().nullable().optional(),
+          status: z.string().optional(),
+          phase: z.string().optional(),
+          category: z.string().optional(),
+          dueDate: z.string().nullable().optional(),
+          assignedTo: z.number().nullable().optional(),
+          completedAt: z.date().nullable().optional()
         });
-      } else {
-        // Log general update activity
-        await storage.createActivityLog({
-          dealId: updatedTask!.dealId,
-          userId: req.user!.id,
-          action: "updated",
-          entityType: "task",
-          entityId: updatedTask!.id,
-          details: `Updated task: ${updatedTask!.title}`
+        
+        // Parse with the explicit update schema
+        const taskData = taskUpdateSchema.parse(req.body);
+        console.log("Parsed task data:", JSON.stringify(taskData, null, 2));
+        
+        const currentTask = await storage.getTask(taskId);
+        if (!currentTask) {
+          return res.status(404).json({ message: "Task not found" });
+        }
+        
+        const updatedTask = await storage.updateTask(taskId, taskData);
+        
+        // Check if status was updated to completed
+        if (taskData.status === TaskStatuses.COMPLETED && currentTask.status !== TaskStatuses.COMPLETED) {
+          // Log completion activity
+          await storage.createActivityLog({
+            dealId: updatedTask!.dealId,
+            userId: req.user!.id,
+            action: "completed",
+            entityType: "task",
+            entityId: updatedTask!.id,
+            details: `Completed task: ${updatedTask!.title}`
+          });
+        } else {
+          // Log general update activity
+          await storage.createActivityLog({
+            dealId: updatedTask!.dealId,
+            userId: req.user!.id,
+            action: "updated",
+            entityType: "task",
+            entityId: updatedTask!.id,
+            details: `Updated task: ${updatedTask!.title}`
+          });
+        }
+        
+        res.json(updatedTask);
+      } catch (validationError) {
+        // Handle validation errors specifically
+        console.error("Validation error for task update:", validationError);
+        return res.status(400).json({ 
+          message: "Invalid task data", 
+          errors: validationError instanceof z.ZodError ? validationError.errors : [{ message: "Validation failed" }]
         });
       }
-      
-      res.json(updatedTask);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid task data", errors: error.errors });
-      }
-      throw error;
+      console.error("Unexpected error in task update:", error);
+      return res.status(500).json({ message: "Server error updating task" });
     }
   });
   

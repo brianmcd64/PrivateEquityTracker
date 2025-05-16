@@ -140,8 +140,19 @@ function EditTaskDialog({ task, onComplete }: { task: Task, onComplete: () => vo
     },
     onError: (error: any) => {
       console.error("Error updating task:", error);
+      // Show the full error response for better debugging
+      console.log("Full error object:", JSON.stringify(error, null, 2));
+      
       // Show more detailed error message if available
-      const errorMsg = error.errors ? JSON.stringify(error.errors) : "Please try again.";
+      let errorMsg = "Please try again.";
+      if (error.errors) {
+        errorMsg = JSON.stringify(error.errors, null, 2);
+      } else if (error.message) {
+        errorMsg = error.message;
+      } else if (typeof error === 'string') {
+        errorMsg = error;
+      }
+      
       toast({
         title: "Error updating task",
         description: `There was an error updating the task: ${errorMsg}`,
