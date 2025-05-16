@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { CalendarIcon } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -60,9 +60,10 @@ export default function NewDealPage() {
   }, [startDate, form]);
   
   // Handle template selection
-  const handleTemplateSelect = (templateId: number | null) => {
+  const handleTemplateSelect = useCallback((templateId: number | null) => {
+    console.log("Template selected in new deal page:", templateId);
     setSelectedTemplateId(templateId);
-  };
+  }, []);
   
   // Apply template to deal
   const applyTemplateMutation = useMutation({
@@ -101,12 +102,8 @@ export default function NewDealPage() {
       console.log("Created deal response:", response);
       return response;
     },
-    onSuccess: (createdDeal) => {
+    onSuccess: async (createdDeal) => {
       console.log("Deal created successfully:", createdDeal);
-      toast({
-        title: "Success",
-        description: "Deal created successfully.",
-      });
       
       // Store the important info about the created deal in localStorage
       if (createdDeal && createdDeal.id) {
@@ -116,17 +113,55 @@ export default function NewDealPage() {
           id: createdDeal.id,
           name: createdDeal.name
         }));
-      }
-      
-      // If a template was selected, apply it to the newly created deal
-      if (selectedTemplateId && createdDeal && createdDeal.id) {
-        console.log(`Applying template ID ${selectedTemplateId} to new deal ID ${createdDeal.id}`);
-        applyTemplateMutation.mutate({
-          dealId: createdDeal.id,
-          templateId: selectedTemplateId
-        });
+        
+        // If a template was selected, apply it directly here
+        if (selectedTemplateId) {
+          console.log(`Applying template ID ${selectedTemplateId} to new deal ID ${createdDeal.id}`);
+          try {
+            // Apply template directly with await to ensure it completes
+            const tasksResponse = await apiRequest(
+              "POST", 
+              `/api/deals/${createdDeal.id}/apply-template`, 
+              { templateId: selectedTemplateId }
+            );
+            
+            console.log("Template application response:", tasksResponse);
+            toast({
+              title: "Deal Created with Tasks",
+              description: `Deal "${createdDeal.name}" created with ${tasksResponse.length} tasks from template.`,
+            });
+            
+            // Make sure all related queries are invalidated
+            queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+            queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}`] });
+            queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}/tasks`] });
+            
+            // Navigate to deals list
+            navigate("/deals");
+          } catch (error) {
+            console.error("Failed to apply template:", error);
+            toast({
+              title: "Template Application Error",
+              description: `Deal created but failed to apply template: ${error instanceof Error ? error.message : "Unknown error"}`,
+              variant: "destructive",
+            });
+            queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+            navigate("/deals");
+          }
+        } else {
+          console.log("No template selected");
+          toast({
+            title: "Success",
+            description: "Deal created successfully.",
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+          navigate("/deals");
+        }
       } else {
-        console.log("No template selected or deal creation incomplete");
+        toast({
+          title: "Success",
+          description: "Deal created successfully.",
+        });
         queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
         navigate("/deals");
       }
