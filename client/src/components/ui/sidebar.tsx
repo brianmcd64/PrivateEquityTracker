@@ -109,11 +109,22 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
         className
       )}
     >
-      <nav className="h-full py-4 overflow-y-auto">
-        <div className="px-4 mb-6">
+      <nav className="h-full py-4 overflow-y-auto flex flex-col">
+        {/* Active Deal Name at the top */}
+        {activeDeal && (
+          <div className="px-4 mb-4">
+            <div className="bg-blue-50 rounded-md p-3">
+              <p className="text-xs uppercase tracking-wider text-neutral-500 font-semibold mb-1">Active Deal</p>
+              <p className="text-sm font-medium truncate text-primary">{activeDeal.name}</p>
+            </div>
+          </div>
+        )}
+        
+        {/* Navigation Menu */}
+        <div className="px-4 mb-6 flex-grow">
           <p className="text-xs uppercase tracking-wider text-neutral-500 font-semibold mb-2">Navigation</p>
           <ul className="space-y-1">
-            {menuItems.map((item) => (
+            {menuItems.filter(item => item.path !== "/deals").map((item) => (
               <li key={item.path}>
                 <Link 
                 href={activeDeal ? item.path : "/deals"}
@@ -136,66 +147,18 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
           </ul>
         </div>
 
-        <div className="px-4 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs uppercase tracking-wider text-neutral-500 font-semibold">Active Deals</p>
-            <button 
-              onClick={() => setDealsOpen(!dealsOpen)}
-              className="text-neutral-500 hover:text-neutral-700"
-            >
-              {dealsOpen ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-
-          {dealsOpen && (
-            <div>
-              {isLoading ? (
-                <p className="text-sm text-neutral-500 text-center py-2">Loading deals...</p>
-              ) : activeDeals.length === 0 ? (
-                <p className="text-sm text-neutral-500 text-center py-2">No active deals</p>
-              ) : (
-                <ul className="space-y-1">
-                  {activeDeals.map((deal) => (
-                    <li key={deal.id}>
-                      <button
-                        onClick={() => handleDealClick(deal)}
-                        className={cn(
-                          "w-full flex items-center px-3 py-2 text-sm font-medium rounded-md",
-                          activeDeal?.id === deal.id
-                            ? "text-white bg-primary"
-                            : "text-neutral-700 hover:bg-neutral-100"
-                        )}
-                      >
-                        <span className="truncate">{deal.name}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <div className="mt-3 flex flex-col space-y-2">
-                <Link 
-                  href="/deals"
-                  className="w-full text-sm text-neutral-600 font-medium flex items-center justify-center"
-                >
-                  Manage Deals
-                </Link>
-
-                {user?.role === "deal_lead" && (
-                  <Link 
-                    href="/deals/new"
-                    className="w-full text-sm text-primary font-medium flex items-center justify-center"
-                  >
-                    <span className="mr-1">+</span> Add New Deal
-                  </Link>
-                )}
-              </div>
-            </div>
-          )}
+        {/* Manage Deals at the bottom */}
+        <div className="px-4 mt-auto mb-6">
+          <Link 
+            href="/deals"
+            className={cn(
+              "flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-neutral-100 w-full",
+              location === "/deals" && "bg-blue-50 border-l-3 border-blue-500"
+            )}
+          >
+            <Briefcase className="h-5 w-5 mr-3 text-neutral-500" />
+            Manage Deals
+          </Link>
         </div>
       </nav>
     </aside>
