@@ -439,9 +439,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const now = new Date();
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, "0");
-      const timestamp = now.getTime();
+      // Make a simpler and shorter ID format
       const randomId = Math.floor(Math.random() * 10000).toString().padStart(4, "0");
-      const uniqueRequestId = `REQ-${year}${month}-${timestamp}${randomId}`;
+      const uniqueRequestId = `REQ-${year}${month}-${randomId}`;
+      
+      console.log("Generated request ID:", uniqueRequestId);
       
       // Validate the request data using the schema
       const requestData = insertRequestSchema.parse({
@@ -452,6 +454,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create the request
       const request = await storage.createRequest(requestData);
+      
+      console.log("Created request with ID:", request.id, "and requestId:", request.requestId);
       
       // Log activity if dealId was provided
       if (dealId) {
