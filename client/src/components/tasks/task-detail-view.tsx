@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Task, Document, Request } from "@shared/schema";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Task, Document, Request, TaskStatuses } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { CreateRequestForm } from "@/components/requests/create-request-form";
 import { RequestsList } from "@/components/requests/requests-list";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 // Simple component for document list
 function DocumentList({ documents }: { documents: Document[] }) {
@@ -34,8 +44,185 @@ function DocumentList({ documents }: { documents: Document[] }) {
   );
 }
 
+// Task edit form schema
+const taskEditSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  status: z.string(),
+  dueDate: z.string().optional(),
+  assignedTo: z.number().optional(),
+});
+
+type TaskEditValues = z.infer<typeof taskEditSchema>;
+
 interface TaskDetailViewProps {
   taskId: number;
+}
+
+// Edit Task Dialog Component
+function EditTaskDialog({ task, onComplete }: { task: Task, onComplete: () => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Convert task.dueDate to YYYY-MM-DD format for the date input
+  const formatDateForInput = (dateString: string | null | undefined) => {
+    if (!dateString) return "";
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "";
+      
+      return date.toISOString().split('T')[0];
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "";
+    }
+  };
+  
+  // Form setup
+  const form = useForm<TaskEditValues>({
+    resolver: zodResolver(taskEditSchema),
+    defaultValues: {
+      title: task.title,
+      description: task.description || "",
+      status: task.status,
+      dueDate: formatDateForInput(task.dueDate),
+      assignedTo: task.assignedTo || undefined,
+    },
+  });
+  
+  // Update task mutation
+  const updateTaskMutation = useMutation({
+    mutationFn: async (data: TaskEditValues) => {
+      return apiRequest("PATCH", `/api/tasks/${task.id}`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Task updated",
+        description: "The task has been successfully updated.",
+      });
+      
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${task.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${task.dealId}/tasks`] });
+      
+      // Close dialog and call onComplete if provided
+      setIsOpen(false);
+      if (onComplete) {
+        onComplete();
+      }
+    },
+    onError: (error) => {
+      console.error("Error updating task:", error);
+      toast({
+        title: "Error updating task",
+        description: "There was an error updating the task. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Form submission handler
+  const onSubmit = (data: TaskEditValues) => {
+    updateTaskMutation.mutate(data);
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">Edit Task</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Edit Task</DialogTitle>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={TaskStatuses.NOT_STARTED}>Not Started</SelectItem>
+                      <SelectItem value={TaskStatuses.IN_PROGRESS}>In Progress</SelectItem>
+                      <SelectItem value={TaskStatuses.COMPLETED}>Completed</SelectItem>
+                      <SelectItem value={TaskStatuses.BLOCKED}>Blocked</SelectItem>
+                      <SelectItem value={TaskStatuses.DEFERRED}>Deferred</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="dueDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Due Date</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="flex justify-end space-x-2 pt-2">
+              <Button variant="outline" type="button" onClick={() => setIsOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updateTaskMutation.isPending}>
+                {updateTaskMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export function TaskDetailView({ taskId }: TaskDetailViewProps) {
@@ -169,7 +356,7 @@ export function TaskDetailView({ taskId }: TaskDetailViewProps) {
       </Tabs>
       
       <CardFooter className="flex justify-between pt-6 border-t">
-        <Button variant="outline">Edit Task</Button>
+        <EditTaskDialog task={task} onComplete={() => queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] })} />
         <CreateRequestForm task={task} onComplete={refreshRequests} />
       </CardFooter>
     </Card>
