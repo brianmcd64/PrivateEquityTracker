@@ -50,41 +50,70 @@ export function TemplateCsvImport({
       console.log("Starting CSV upload for template:", templateName);
       
       const formData = new FormData();
-      formData.append("file", file);
+      // Important: The name 'file' must match what the server expects
+      formData.append("file", file, file.name);
       formData.append("name", templateName);
       formData.append("description", templateDesc || "");
       
+      // Convert form data to string for debugging
+      let formEntries = [];
+      for (let pair of formData.entries()) {
+        if (pair[0] === 'file') {
+          formEntries.push(`${pair[0]}: [File ${pair[1].name}, ${pair[1].size} bytes]`);
+        } else {
+          formEntries.push(`${pair[0]}: ${pair[1]}`);
+        }
+      }
+      console.log("Form data entries:", formEntries);
+      
       try {
         console.log("Sending CSV file:", file.name, "size:", file.size);
-        const response = await fetch("/api/task-templates/import", {
-          method: "POST",
-          body: formData,
-          credentials: "include", // Include cookies for auth
-          // Don't set Content-Type header as the browser will set it with the boundary
-        });
         
-        if (!response.ok) {
-          let errorMessage = "Import failed";
+        // Use XMLHttpRequest instead of fetch for better control over the upload
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
           
-          try {
-            // Try to parse as JSON first
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorData.error || errorMessage;
-          } catch (e) {
-            // If not JSON, try getting text
-            try {
-              const errorText = await response.text();
-              if (errorText) errorMessage = errorText;
-            } catch (textError) {
-              // If that fails too, use status text
-              errorMessage = `${errorMessage}: ${response.status} ${response.statusText}`;
+          xhr.open('POST', '/api/task-templates/import', true);
+          xhr.withCredentials = true; // Include cookies for auth
+          
+          xhr.onload = function() {
+            if (this.status >= 200 && this.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText);
+                resolve(response);
+              } catch (e) {
+                reject(new Error(`Failed to parse response: ${xhr.responseText}`));
+              }
+            } else {
+              let errorMessage = `Import failed: ${this.status} ${this.statusText}`;
+              
+              try {
+                const errorData = JSON.parse(xhr.responseText);
+                errorMessage = errorData.message || errorData.error || errorMessage;
+              } catch (e) {
+                // If not valid JSON, use the text directly
+                if (xhr.responseText) {
+                  errorMessage = xhr.responseText;
+                }
+              }
+              
+              reject(new Error(errorMessage));
             }
-          }
+          };
           
-          throw new Error(errorMessage);
-        }
-        
-        return await response.json();
+          xhr.onerror = function() {
+            reject(new Error('Network error during file upload'));
+          };
+          
+          xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+              const percentComplete = (e.loaded / e.total) * 100;
+              console.log(`Upload progress: ${percentComplete.toFixed(0)}%`);
+            }
+          };
+          
+          xhr.send(formData);
+        });
       } finally {
         setIsUploading(false);
       }

@@ -473,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================
   
   // Import template from CSV
-  app.post("/api/task-templates/import", isAuthenticated, isDealLead, async (req, res) => {
+  app.post("/api/task-templates/import", isAuthenticated, isDealLead, (req, res) => {
     try {
       console.log("CSV import request received");
       
@@ -488,18 +488,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get the uploaded file
-      const file = req.files.file as import('express-fileupload').UploadedFile;
-      console.log(`File uploaded: ${file.name}, size: ${file.size} bytes, path: ${file.tempFilePath}`);
+      let file = req.files.file;
+      
+      // Handle file array (if multiple files with same name are uploaded)
+      if (Array.isArray(file)) {
+        file = file[0];
+      }
+      
+      const uploadedFile = file as import('express-fileupload').UploadedFile;
+      console.log(`File uploaded: ${uploadedFile.name}, size: ${uploadedFile.size} bytes, path: ${uploadedFile.tempFilePath}`);
       
       // Check if it's a CSV file
-      if (file.mimetype !== "text/csv" && !file.name.endsWith(".csv")) {
-        console.warn(`Invalid file type: ${file.mimetype}`);
+      if (uploadedFile.mimetype !== "text/csv" && !uploadedFile.name.endsWith(".csv")) {
+        console.warn(`Invalid file type: ${uploadedFile.mimetype}`);
         return res.status(400).json({ message: "File must be a CSV" });
       }
       
       // Ensure the file exists at the temporary path
-      if (!fs.existsSync(file.tempFilePath)) {
-        console.error(`Temp file doesn't exist at path: ${file.tempFilePath}`);
+      if (!fs.existsSync(uploadedFile.tempFilePath)) {
+        console.error(`Temp file doesn't exist at path: ${uploadedFile.tempFilePath}`);
         return res.status(500).json({ message: "File upload failed - temporary file not found" });
       }
       
@@ -514,74 +521,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Processing CSV import for template: ${name}`);
       
-      try {
-        // Parse the CSV file with added error handling
-        console.log(`Reading CSV file from: ${file.tempFilePath}`);
-        const fileContent = fs.readFileSync(file.tempFilePath, 'utf8');
-        console.log(`File content (first 200 chars): ${fileContent.substring(0, 200)}...`);
-        
-        // Parse the CSV file
-        const items = await parseCsvFromFile(file.tempFilePath);
-        
-        if (items.length === 0) {
-          console.warn("CSV file parsed but contains no valid items");
-          return res.status(400).json({ message: "CSV file must contain at least one valid task" });
-        }
-        
-        console.log(`Parsed ${items.length} tasks from CSV`);
-        console.log("Sample items:", JSON.stringify(items.slice(0, 2)));
-        
-        // Create the template
-        const template = await storage.createTaskTemplate({
-          name,
-          description,
-          createdBy: req.user!.id,
-          isDefault: false
+      // Read file contents synchronously to avoid async issues
+      const fileContent = fs.readFileSync(uploadedFile.tempFilePath, 'utf8');
+      console.log(`File content (first 200 chars): ${fileContent.substring(0, 200)}...`);
+      
+      // Use the string parser instead of file parser which has been causing issues
+      parseCsvFromString(fileContent)
+        .then(items => {
+          if (items.length === 0) {
+            console.warn("CSV file parsed but contains no valid items");
+            return res.status(400).json({ message: "CSV file must contain at least one valid task" });
+          }
+          
+          console.log(`Parsed ${items.length} tasks from CSV`);
+          console.log("Sample items:", JSON.stringify(items.slice(0, 2)));
+          
+          // Create the template
+          return storage.createTaskTemplate({
+            name,
+            description,
+            createdBy: req.user!.id,
+            isDefault: false
+          })
+            .then(template => {
+              console.log(`Created template with ID: ${template.id}`);
+              
+              // Convert items to template items
+              const templateItems = convertToTemplateItems(items, template.id);
+              
+              // Add items to the template - sequentially to avoid DB issues
+              const addTemplateItems = async () => {
+                const createdItems = [];
+                for (const item of templateItems) {
+                  const createdItem = await storage.createTaskTemplateItem(item);
+                  createdItems.push(createdItem);
+                }
+                return createdItems;
+              };
+              
+              return addTemplateItems()
+                .then(createdItems => {
+                  console.log(`Added ${createdItems.length} items to template`);
+                  
+                  // Clean up temp file
+                  fs.unlink(uploadedFile.tempFilePath, (err) => {
+                    if (err) console.error(`Error deleting temp file: ${err.message}`);
+                  });
+                  
+                  // Log activity
+                  return storage.createActivityLog({
+                    dealId: 0, // Not deal-specific
+                    userId: req.user!.id,
+                    action: "imported",
+                    entityType: "task_template",
+                    entityId: template.id,
+                    details: `Imported template from CSV: ${template.name} with ${createdItems.length} tasks`
+                  })
+                    .then(() => {
+                      // Return the created template with items
+                      const response = {
+                        template,
+                        items: createdItems
+                      };
+                      console.log("CSV import successful, sending response");
+                      res.status(201).json(response);
+                    });
+                });
+            });
+        })
+        .catch(error => {
+          console.error("Error processing CSV:", error);
+          
+          // Clean up temp file
+          fs.unlink(uploadedFile.tempFilePath, (err) => {
+            if (err) console.error(`Error deleting temp file: ${err.message}`);
+          });
+          
+          res.status(400).json({ 
+            message: "Error parsing CSV file", 
+            error: error instanceof Error ? error.message : "File format is incorrect" 
+          });
         });
-        
-        console.log(`Created template with ID: ${template.id}`);
-        
-        // Convert items to template items
-        const templateItems = convertToTemplateItems(items, template.id);
-        
-        // Add items to the template
-        const createdItems = [];
-        for (const item of templateItems) {
-          const createdItem = await storage.createTaskTemplateItem(item);
-          createdItems.push(createdItem);
-        }
-        
-        console.log(`Added ${createdItems.length} items to template`);
-        
-        // Clean up temp file
-        fs.unlink(file.tempFilePath, (err) => {
-          if (err) console.error(`Error deleting temp file: ${err.message}`);
-        });
-        
-        // Log activity
-        await storage.createActivityLog({
-          dealId: 0, // Not deal-specific
-          userId: req.user!.id,
-          action: "imported",
-          entityType: "task_template",
-          entityId: template.id,
-          details: `Imported template from CSV: ${template.name} with ${createdItems.length} tasks`
-        });
-        
-        // Return the created template with items
-        const response = {
-          template,
-          items: createdItems
-        };
-        console.log("CSV import successful, sending response");
-        res.status(201).json(response);
-      } catch (parseError) {
-        console.error("Error parsing CSV file:", parseError);
-        return res.status(400).json({ 
-          message: "Error parsing CSV file", 
-          error: parseError instanceof Error ? parseError.message : "File format is incorrect" 
-        });
-      }
     } catch (error) {
       console.error("CSV import error:", error);
       
