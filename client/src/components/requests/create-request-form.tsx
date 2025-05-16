@@ -59,17 +59,19 @@ export function CreateRequestForm({ task, onComplete }: CreateRequestFormProps) 
       status: RequestStatuses.PENDING,
       recipient: "seller",
       priority: 2,
-      sendDate: new Date().toISOString(),
+      // Remove sendDate from the default values - we'll handle it in mutationFn
     },
   });
   
   // Create request mutation
   const createRequestMutation = useMutation({
     mutationFn: async (data: RequestFormValues) => {
-      // Add dealId separately for activity logging
+      // Add dealId separately for activity logging and handle date format
       return apiRequest("POST", "/api/requests", {
         ...data,
-        dealId: task.dealId
+        dealId: task.dealId,
+        // Either use null or format as the server expects
+        sendDate: null
       });
     },
     onSuccess: () => {

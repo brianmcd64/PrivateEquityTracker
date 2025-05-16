@@ -1,14 +1,60 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Task } from "@shared/schema";
+import { Task, Document, Request } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { CreateRequestForm } from "@/components/requests/create-request-form";
-import { DocumentList } from "@/components/documents/document-list";
-import { RequestsList } from "@/components/requests/requests-list";
+// Simple component for requests list 
+function RequestsList({ requests }: { requests: Request[] }) {
+  if (!requests || requests.length === 0) {
+    return <p className="text-center text-gray-500">No requests found.</p>;
+  }
+  
+  return (
+    <div className="space-y-3">
+      {requests.map((req) => (
+        <Card key={req.id} className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-medium">{req.requestId}</h3>
+            <Badge variant="outline">{req.status}</Badge>
+          </div>
+          <p className="text-sm">{req.details}</p>
+          <div className="mt-2 text-xs text-gray-500">
+            Recipient: {req.recipient} | Priority: {req.priority}
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// Simple component for document list
+function DocumentList({ documents }: { documents: Document[] }) {
+  if (!documents || documents.length === 0) {
+    return <p className="text-center text-gray-500">No documents found.</p>;
+  }
+  
+  return (
+    <div className="space-y-3">
+      {documents.map((doc) => (
+        <Card key={doc.id} className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium">{doc.fileName}</h3>
+              <p className="text-sm text-gray-500">
+                {doc.fileSize} bytes
+              </p>
+            </div>
+            <Button size="sm" variant="outline">Download</Button>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 interface TaskDetailViewProps {
   taskId: number;
@@ -23,13 +69,13 @@ export function TaskDetailView({ taskId }: TaskDetailViewProps) {
   });
 
   // Fetch documents for this task
-  const { data: documents = [] } = useQuery({
+  const { data: documents = [] } = useQuery<Document[]>({
     queryKey: [`/api/tasks/${taskId}/documents`],
     enabled: !!taskId,
   });
 
   // Fetch requests for this task
-  const { data: requests = [] } = useQuery({
+  const { data: requests = [] } = useQuery<Request[]>({
     queryKey: [`/api/tasks/${taskId}/requests`],
     enabled: !!taskId,
   });

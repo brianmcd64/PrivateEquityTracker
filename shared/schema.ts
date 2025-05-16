@@ -117,7 +117,9 @@ export const requests = pgTable("requests", {
   response: text("response"),
 });
 
-export const insertRequestSchema = createInsertSchema(requests).pick({
+export const insertRequestSchema = createInsertSchema(requests).extend({
+  sendDate: z.date().optional().nullable(),
+}).pick({
   taskId: true,
   requestId: true,
   requestType: true,
