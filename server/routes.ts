@@ -123,10 +123,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new deal (deal lead only)
   app.post("/api/deals", isAuthenticated, isDealLead, async (req, res) => {
     try {
-      const dealData = insertDealSchema.parse(req.body);
-      const deal = await storage.createDeal(dealData);
+      const { templateId, ...dealData } = req.body;
+      const validatedDealData = insertDealSchema.parse(dealData);
       
-      // Log activity
+      // Create the deal
+      const deal = await storage.createDeal(validatedDealData);
+      
+      // Log activity for deal creation
       await storage.createActivityLog({
         dealId: deal.id,
         userId: req.user!.id,
@@ -136,11 +139,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         details: `Created deal: ${deal.name}`
       });
       
+      // If a template ID was provided, apply the template right away
+      if (templateId && !isNaN(parseInt(templateId))) {
+        try {
+          const template = await storage.getTaskTemplate(parseInt(templateId));
+          if (template) {
+            console.log(`[Deal Creation] Applying template ID ${templateId} (${template.name}) to new deal ID ${deal.id}`);
+            
+            // Apply the template to create tasks
+            const tasks = await storage.applyTemplateToProject(parseInt(templateId), deal.id);
+            
+            if (tasks.length > 0) {
+              console.log(`[Deal Creation] Successfully created ${tasks.length} tasks from template for deal ${deal.id}`);
+              
+              // Log activity for template application
+              await storage.createActivityLog({
+                dealId: deal.id,
+                userId: req.user!.id,
+                action: "applied",
+                entityType: "task_template",
+                entityId: parseInt(templateId),
+                details: `Applied task template "${template.name}" to deal: Created ${tasks.length} tasks`
+              });
+              
+              // Return the deal with tasks
+              return res.status(201).json({
+                ...deal,
+                tasksCreated: tasks.length,
+                templateApplied: template.name
+              });
+            }
+          }
+        } catch (templateError) {
+          console.error(`[Deal Creation] Error applying template ${templateId} to deal ${deal.id}:`, templateError);
+          // Still return the deal even if template application fails
+        }
+      }
+      
+      // Return just the deal if no template or if template application failed
       res.status(201).json(deal);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid deal data", errors: error.errors });
       }
+      console.error("[Deal Creation] Error:", error);
       throw error;
     }
   });

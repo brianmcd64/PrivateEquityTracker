@@ -118,6 +118,10 @@ export default function NewDealPage() {
     onSuccess: async (createdDeal) => {
       console.log("Deal created successfully:", createdDeal);
       
+      // Check if we have tasks information from the server
+      const tasksCreated = createdDeal.tasksCreated;
+      const templateApplied = createdDeal.templateApplied;
+      
       // Store the important info about the created deal in localStorage
       if (createdDeal && createdDeal.id) {
         // Update localStorage with the new deal information
@@ -127,73 +131,34 @@ export default function NewDealPage() {
           name: createdDeal.name
         }));
         
-        // If a template was selected, apply it directly here
-        if (selectedTemplateId) {
-          console.log(`Applying template ID ${selectedTemplateId} to new deal ID ${createdDeal.id}`);
-          try {
-            // Direct fetch to the server to apply the template
-            // Need to include credentials to ensure the auth cookie is sent
-            const response = await fetch(`/api/deals/${createdDeal.id}/apply-template`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              credentials: 'same-origin', // This ensures cookies are sent with the request
-              body: JSON.stringify({ templateId: selectedTemplateId }),
-            });
-            
-            if (!response.ok) {
-              throw new Error(`Template application failed: ${response.statusText}`);
-            }
-            
-            const tasksResponse = await response.json();
-            console.log("Template application response:", tasksResponse);
-            
-            if (Array.isArray(tasksResponse) && tasksResponse.length > 0) {
-              toast({
-                title: "Deal Created with Tasks",
-                description: `Deal "${createdDeal.name}" created with ${tasksResponse.length} tasks from template.`,
-              });
-            } else {
-              console.warn("Template applied but returned empty task array:", tasksResponse);
-              toast({
-                title: "Deal Created",
-                description: "Deal created, but no tasks were created from the template.",
-              });
-            }
-            
-            // Invalidate all queries related to this deal
-            queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
-            queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}`] });
-            queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}/tasks`] });
-          } catch (error) {
-            console.error("Failed to apply template:", error);
-            toast({
-              title: "Template Application Error",
-              description: `Deal created but failed to apply template. Please refresh and check if tasks were created.`,
-              variant: "destructive",
-            });
-          } finally {
-            // Always navigate to deals list after deal creation
-            navigate("/deals");
-          }
+        // Show appropriate toast based on whether tasks were created
+        if (tasksCreated && templateApplied) {
+          toast({
+            title: "Deal Created with Tasks",
+            description: `Deal "${createdDeal.name}" created with ${tasksCreated} tasks from template "${templateApplied}".`,
+          });
         } else {
-          console.log("No template selected");
           toast({
             title: "Success",
             description: "Deal created successfully.",
           });
-          queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
-          navigate("/deals");
         }
       } else {
         toast({
           title: "Success",
           description: "Deal created successfully.",
         });
-        queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
-        navigate("/deals");
       }
+      
+      // Invalidate all queries related to this deal
+      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      if (createdDeal && createdDeal.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}/tasks`] });
+      }
+      
+      // Navigate to deals list after deal creation
+      navigate("/deals");
     },
     onError: (error: Error) => {
       console.error("Failed to create deal:", error);
@@ -211,9 +176,12 @@ export default function NewDealPage() {
     const formattedData = {
       ...data,
       startDate: data.startDate ? data.startDate.toISOString() : undefined,
-      endDate: data.endDate ? data.endDate.toISOString() : undefined
+      endDate: data.endDate ? data.endDate.toISOString() : undefined,
+      // Include the template ID directly in the deal creation request
+      templateId: selectedTemplateId
     };
     
+    console.log("Submitting deal with data:", formattedData);
     createDealMutation.mutate(formattedData as any);
   };
 
