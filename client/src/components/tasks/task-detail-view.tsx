@@ -51,8 +51,8 @@ const taskEditSchema = z.object({
   status: z.string(),
   phase: z.string(),
   category: z.string(),
-  dueDate: z.string().optional(),
-  assignedTo: z.number().optional(),
+  dueDate: z.string().nullable().optional(),
+  assignedTo: z.number().nullable().optional(),
 });
 
 type TaskEditValues = z.infer<typeof taskEditSchema>;
@@ -292,7 +292,13 @@ function EditTaskDialog({ task, onComplete }: { task: Task, onComplete: () => vo
                 <FormItem>
                   <FormLabel>Due Date</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input 
+                      type="date" 
+                      value={field.value || ''} 
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

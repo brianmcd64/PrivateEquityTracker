@@ -75,8 +75,8 @@ export const insertTaskSchema = baseTaskSchema.pick({
   assignedTo: true,
   completedAt: true,
 }).extend({
-  // Override dueDate to accept ISO date strings
-  dueDate: z.string().datetime().nullable().optional(),
+  // Override dueDate to accept ISO date strings or null
+  dueDate: z.string().nullable().optional(),
 });
 
 // Documents model
