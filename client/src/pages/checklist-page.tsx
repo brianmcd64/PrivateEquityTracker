@@ -65,27 +65,42 @@ export default function ChecklistPage() {
   
   // Get active deal from localStorage on component mount
   useEffect(() => {
-    console.log("Checking localStorage for activeDeal");
-    const storedDeal = localStorage.getItem("activeDeal");
-    console.log("StoredDeal from localStorage:", storedDeal);
-    
-    if (storedDeal) {
-      try {
-        const parsedDeal = JSON.parse(storedDeal);
-        console.log("Parsed deal from localStorage:", parsedDeal);
-        
-        // Only set if we have a valid ID
-        if (parsedDeal && parsedDeal.id) {
-          console.log("Setting deal ID to:", parsedDeal.id);
-          setDealId(parsedDeal.id);
-          setDealName(parsedDeal.name || "");
+    // Check for activeDealId first (primary source of truth)
+    const storedDealId = localStorage.getItem("activeDealId");
+    if (storedDealId) {
+      const dealId = parseInt(storedDealId);
+      setDealId(dealId);
+      
+      // Check if we also have the stored deal object with name
+      const storedDeal = localStorage.getItem("activeDeal");
+      if (storedDeal) {
+        try {
+          const parsedDeal = JSON.parse(storedDeal);
+          if (parsedDeal && parsedDeal.id === dealId) {
+            setDealName(parsedDeal.name || "");
+          }
+        } catch (e) {
+          console.error("Failed to parse active deal from localStorage", e);
         }
-      } catch (e) {
-        console.error("Failed to parse active deal from localStorage", e);
-        // Don't redirect, let the component handle the null dealId case
+      }
+    } else {
+      // Fallback to checking activeDeal if no activeDealId exists
+      const storedDeal = localStorage.getItem("activeDeal");
+      if (storedDeal) {
+        try {
+          const parsedDeal = JSON.parse(storedDeal);
+          if (parsedDeal && parsedDeal.id) {
+            setDealId(parsedDeal.id);
+            setDealName(parsedDeal.name || "");
+            // Update activeDealId for consistency
+            localStorage.setItem("activeDealId", parsedDeal.id.toString());
+          }
+        } catch (e) {
+          console.error("Failed to parse active deal from localStorage", e);
+        }
       }
     }
-    // Don't redirect to deals page anymore, we'll show a message instead
+    // Don't redirect to deals page, we'll show a message instead
   }, []);
   
   // Fetch deal details to ensure they're up to date

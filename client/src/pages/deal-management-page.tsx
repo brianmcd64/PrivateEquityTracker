@@ -191,14 +191,24 @@ export default function DealManagementPage() {
   
   // Set as active deal
   const handleSetActive = (dealId: number) => {
-    // Store the active deal ID in localStorage
+    // Find the complete deal object
+    const deal = deals.find(d => d.id === dealId);
+    if (!deal) return;
+    
+    // Store both the active deal ID and the complete deal object in localStorage
     localStorage.setItem("activeDealId", dealId.toString());
+    localStorage.setItem("activeDeal", JSON.stringify({
+      id: deal.id,
+      name: deal.name,
+      status: deal.status
+    }));
+    
     // Update the state
     setActiveDealId(dealId.toString());
     
     toast({
       title: "Active Deal Set",
-      description: "You are now working on this deal.",
+      description: `You are now working on ${deal.name}.`,
     });
     
     // Navigate to dashboard
