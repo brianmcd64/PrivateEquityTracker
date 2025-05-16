@@ -1,77 +1,77 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useParams, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { Task } from "@shared/schema";
 import { Layout } from "@/components/layout";
-import { TaskDetail } from "@/components/tasks/task-detail";
-import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { TaskDetailView } from "@/components/tasks/task-detail-view";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const taskId = id; // Map the id parameter for clarity
   const [, navigate] = useLocation();
-  const { toast } = useToast();
-  const [taskId, setTaskId] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (id) {
-      const parsedId = parseInt(id);
-      if (isNaN(parsedId)) {
-        setError("Invalid task ID");
-        toast({
-          title: "Error",
-          description: "Invalid task ID",
-          variant: "destructive",
-        });
-      } else {
-        setTaskId(parsedId);
-      }
-    } else {
-      setError("No task ID provided");
-      toast({
-        title: "Error",
-        description: "No task ID provided",
-        variant: "destructive",
-      });
-    }
-    setIsLoading(false);
-  }, [id, toast]);
-
+  
+  // Fetch task data to get the deal ID for navigation
+  const { data: task, isLoading, error } = useQuery<Task>({
+    queryKey: [`/api/tasks/${taskId}`],
+    enabled: !!taskId,
+  });
+  
+  // Navigate back to the deal page
   const handleBack = () => {
-    navigate("/checklist");
+    if (task?.dealId) {
+      navigate(`/deal/${task.dealId}`);
+    } else {
+      navigate("/deals");
+    }
   };
-
-  if (isLoading) {
+  
+  // Render error message if task not found
+  if (error) {
     return (
-      <Layout title="Task Details" subtitle="Loading...">
-        <div className="flex justify-center items-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+      <Layout title="Task Details">
+        <Card className="max-w-3xl mx-auto">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-red-500">Error Loading Task</h2>
+              <p className="mt-2 text-gray-600">The task you're looking for could not be found.</p>
+              <Button onClick={() => navigate("/deals")} className="mt-4">
+                Back to Deals
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </Layout>
     );
   }
-
-  if (error || !taskId) {
-    return (
-      <Layout title="Error" subtitle="Task not found">
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="text-red-500 text-center">
-            <p className="text-lg font-semibold">{error || "Unknown error"}</p>
-            <button
-              onClick={() => navigate("/checklist")}
-              className="mt-4 text-primary hover:underline"
-            >
-              Return to Checklist
-            </button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
+  
   return (
-    <Layout title="Task Details" subtitle="TechFusion Acquisition">
-      <TaskDetail taskId={taskId} onBack={handleBack} />
+    <Layout 
+      title={
+        <div className="flex items-center">
+          <Button 
+            variant="ghost" 
+            className="mr-2 h-8 w-8 p-0" 
+            onClick={handleBack}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <span>Task Details</span>
+        </div>
+      }
+      subtitle={isLoading ? "Loading..." : task?.title}
+    >
+      <div className="max-w-3xl mx-auto">
+        {isLoading ? (
+          <div className="text-center py-8">Loading task details...</div>
+        ) : taskId ? (
+          <TaskDetailView taskId={parseInt(taskId)} />
+        ) : (
+          <div className="text-center py-8 text-red-500">Task ID not provided</div>
+        )}
+      </div>
     </Layout>
   );
 }

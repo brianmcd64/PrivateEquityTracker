@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Task } from "@shared/schema";
+import { Task, RequestTypes, RequestStatuses } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,7 +17,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 // Schema for the request form
 const requestFormSchema = z.object({
   taskId: z.number(),
-  dealId: z.number(),
   requestId: z.string().min(3, "Request ID must be at least 3 characters"),
   requestType: z.string(),
   details: z.string().min(10, "Details must be at least 10 characters"),
@@ -25,6 +24,7 @@ const requestFormSchema = z.object({
   recipient: z.string(),
   priority: z.coerce.number().int().min(1).max(3),
   sendDate: z.string().optional(),
+  // We'll pass dealId separately to avoid validation issues
 });
 
 type RequestFormValues = z.infer<typeof requestFormSchema>;
@@ -53,11 +53,10 @@ export function CreateRequestForm({ task, onComplete }: CreateRequestFormProps) 
     resolver: zodResolver(requestFormSchema),
     defaultValues: {
       taskId: task.id,
-      dealId: task.dealId,
       requestId: generateRequestId(),
-      requestType: "information",
+      requestType: RequestTypes.INFORMATION,
       details: "",
-      status: "pending",
+      status: RequestStatuses.PENDING,
       recipient: "seller",
       priority: 2,
       sendDate: new Date().toISOString(),
@@ -67,7 +66,11 @@ export function CreateRequestForm({ task, onComplete }: CreateRequestFormProps) 
   // Create request mutation
   const createRequestMutation = useMutation({
     mutationFn: async (data: RequestFormValues) => {
-      return apiRequest("POST", "/api/requests", data);
+      // Add dealId separately for activity logging
+      return apiRequest("POST", "/api/requests", {
+        ...data,
+        dealId: task.dealId
+      });
     },
     onSuccess: () => {
       toast({
@@ -144,10 +147,10 @@ export function CreateRequestForm({ task, onComplete }: CreateRequestFormProps) 
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="information">Information</SelectItem>
-                      <SelectItem value="clarification">Clarification</SelectItem>
-                      <SelectItem value="document">Document</SelectItem>
-                      <SelectItem value="meeting">Meeting</SelectItem>
+                      <SelectItem value={RequestTypes.INFORMATION}>Information</SelectItem>
+                      <SelectItem value={RequestTypes.CLARIFICATION}>Clarification</SelectItem>
+                      <SelectItem value={RequestTypes.DOCUMENT}>Document</SelectItem>
+                      <SelectItem value={RequestTypes.MEETING}>Meeting</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -223,9 +226,8 @@ export function CreateRequestForm({ task, onComplete }: CreateRequestFormProps) 
               )}
             />
             
-            {/* Hidden fields for taskId, dealId, status */}
+            {/* Hidden fields for taskId and status */}
             <input type="hidden" {...form.register("taskId")} />
-            <input type="hidden" {...form.register("dealId")} />
             <input type="hidden" {...form.register("status")} />
             
             <div className="pt-4 flex justify-end space-x-2">

@@ -26,7 +26,7 @@ export function DocumentList({ documents }: DocumentListProps) {
                 <div>
                   <h3 className="font-medium">{document.fileName}</h3>
                   <p className="text-xs text-gray-500">
-                    Uploaded {formatDistance(new Date(document.createdAt), new Date(), { addSuffix: true })}
+                    Uploaded {formatDistance(new Date(document.uploadedAt), new Date(), { addSuffix: true })}
                   </p>
                 </div>
               </div>
