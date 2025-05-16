@@ -432,28 +432,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new request
   app.post("/api/requests", isAuthenticated, async (req, res) => {
     try {
+      // Extract dealId for activity logging before schema validation
+      const { dealId, ...requestBody } = req.body;
+      
+      // Validate the request data using the schema
       const requestData = insertRequestSchema.parse({
-        ...req.body,
+        ...requestBody,
         createdBy: req.user!.id
       });
       
+      // Create the request
       const request = await storage.createRequest(requestData);
       
-      // Log activity
-      await storage.createActivityLog({
-        dealId: req.body.dealId, // Need to pass dealId in request body since request only has taskId
-        userId: req.user!.id,
-        action: "created",
-        entityType: "request",
-        entityId: request.id,
-        details: `Created request: ${request.requestId}`
-      });
+      // Log activity if dealId was provided
+      if (dealId) {
+        await storage.createActivityLog({
+          dealId: parseInt(dealId), 
+          userId: req.user!.id,
+          action: "created",
+          entityType: "request",
+          entityId: request.id,
+          details: `Created request: ${request.requestId}`
+        });
+      }
       
       res.status(201).json(request);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Request validation error:", error.errors);
         return res.status(400).json({ message: "Invalid request data", errors: error.errors });
       }
+      console.error("Error creating request:", error);
       throw error;
     }
   });
