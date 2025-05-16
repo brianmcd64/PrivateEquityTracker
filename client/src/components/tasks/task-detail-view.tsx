@@ -49,6 +49,8 @@ const taskEditSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   status: z.string(),
+  phase: z.string(),
+  category: z.string(),
   dueDate: z.string().optional(),
   assignedTo: z.number().optional(),
 });
@@ -87,6 +89,8 @@ function EditTaskDialog({ task, onComplete }: { task: Task, onComplete: () => vo
       title: task.title,
       description: task.description || "",
       status: task.status,
+      phase: task.phase,
+      category: task.category,
       dueDate: formatDateForInput(task.dueDate),
       assignedTo: task.assignedTo || undefined,
     },
@@ -292,9 +296,12 @@ export function TaskDetailView({ taskId }: TaskDetailViewProps) {
               Deal: {task.dealId} | Phase: {formatPhase(task.phase)} | Category: {formatCategory(task.category)}
             </CardDescription>
           </div>
-          <Badge className={getStatusColor(task.status)}>
-            {task.status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge className={getStatusColor(task.status)}>
+              {task.status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+            </Badge>
+            <EditTaskDialog task={task} onComplete={() => queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] })} />
+          </div>
         </div>
       </CardHeader>
       
@@ -355,8 +362,7 @@ export function TaskDetailView({ taskId }: TaskDetailViewProps) {
         </TabsContent>
       </Tabs>
       
-      <CardFooter className="flex justify-between pt-6 border-t">
-        <EditTaskDialog task={task} onComplete={() => queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}`] })} />
+      <CardFooter className="flex justify-end pt-6 border-t">
         <CreateRequestForm task={task} onComplete={refreshRequests} />
       </CardFooter>
     </Card>
