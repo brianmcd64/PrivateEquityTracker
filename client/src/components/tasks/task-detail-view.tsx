@@ -18,7 +18,7 @@ export function TaskDetailView({ taskId }: TaskDetailViewProps) {
   const [activeTab, setActiveTab] = useState("details");
 
   // Fetch task data
-  const { data: task, isLoading, error } = useQuery({
+  const { data: task, isLoading, error } = useQuery<Task>({
     queryKey: [`/api/tasks/${taskId}`],
   });
 
