@@ -49,71 +49,33 @@ export function TemplateCsvImport({
       setIsUploading(true);
       console.log("Starting CSV upload for template:", templateName);
       
+      // Simple upload implementation using basic FormData and fetch
       const formData = new FormData();
-      // Important: The name 'file' must match what the server expects
-      formData.append("file", file, file.name);
+      formData.append("file", file);
       formData.append("name", templateName);
       formData.append("description", templateDesc || "");
-      
-      // Convert form data to string for debugging
-      let formEntries = [];
-      for (let pair of formData.entries()) {
-        if (pair[0] === 'file') {
-          formEntries.push(`${pair[0]}: [File ${pair[1].name}, ${pair[1].size} bytes]`);
-        } else {
-          formEntries.push(`${pair[0]}: ${pair[1]}`);
-        }
-      }
-      console.log("Form data entries:", formEntries);
       
       try {
         console.log("Sending CSV file:", file.name, "size:", file.size);
         
-        // Use XMLHttpRequest instead of fetch for better control over the upload
-        return new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          
-          xhr.open('POST', '/api/task-templates/import', true);
-          xhr.withCredentials = true; // Include cookies for auth
-          
-          xhr.onload = function() {
-            if (this.status >= 200 && this.status < 300) {
-              try {
-                const response = JSON.parse(xhr.responseText);
-                resolve(response);
-              } catch (e) {
-                reject(new Error(`Failed to parse response: ${xhr.responseText}`));
-              }
-            } else {
-              let errorMessage = `Import failed: ${this.status} ${this.statusText}`;
-              
-              try {
-                const errorData = JSON.parse(xhr.responseText);
-                errorMessage = errorData.message || errorData.error || errorMessage;
-              } catch (e) {
-                // If not valid JSON, use the text directly
-                if (xhr.responseText) {
-                  errorMessage = xhr.responseText;
-                }
-              }
-              
-              reject(new Error(errorMessage));
-            }
-          };
-          
-          xhr.onerror = function() {
-            reject(new Error('Network error during file upload'));
-          };
-          
-          xhr.upload.onprogress = function(e) {
-            if (e.lengthComputable) {
-              const percentComplete = (e.loaded / e.total) * 100;
-              console.log(`Upload progress: ${percentComplete.toFixed(0)}%`);
-            }
-          };
-          
-          xhr.send(formData);
+        const response = await fetch("/api/task-templates/import", {
+          method: "POST",
+          body: formData,
+          credentials: "include"
         });
+        
+        if (!response.ok) {
+          let errorText = "";
+          try {
+            const errorData = await response.json();
+            errorText = errorData.message || errorData.error || response.statusText;
+          } catch (e) {
+            errorText = await response.text() || `Error ${response.status}`;
+          }
+          throw new Error(errorText);
+        }
+        
+        return await response.json();
       } finally {
         setIsUploading(false);
       }

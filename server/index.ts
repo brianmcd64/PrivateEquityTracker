@@ -24,11 +24,11 @@ if (!fs.existsSync(tempDir)) {
 app.use(fileUpload({
   useTempFiles: true,
   tempFileDir: tempDir,
-  parseNested: true,
+  parseNested: false, // Disable parseNested as it can cause issues
   debug: true,
   abortOnLimit: true,
   responseOnLimit: "File size limit exceeded",
-  fileSize: 5 * 1024 * 1024 // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 }));
 
 app.use((req, res, next) => {
