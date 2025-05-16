@@ -424,54 +424,80 @@ export class DatabaseStorage implements IStorage {
   
   // Apply template to a deal (creates tasks from template)
   async applyTemplateToProject(templateId: number, dealId: number): Promise<Task[]> {
+    console.log(`[Template Application] Starting application of template ID ${templateId} to deal ID ${dealId}`);
+    
     // Get the template
     const template = await this.getTaskTemplate(templateId);
     if (!template) {
+      console.error(`[Template Application] Template with ID ${templateId} not found`);
       throw new Error("Template not found");
     }
+    console.log(`[Template Application] Found template: "${template.name}"`);
     
     // Get the deal to access its start date
     const deal = await this.getDeal(dealId);
     if (!deal) {
+      console.error(`[Template Application] Deal with ID ${dealId} not found`);
       throw new Error("Deal not found");
     }
+    console.log(`[Template Application] Found deal: "${deal.name}" with start date: ${deal.startDate}`);
     
     // Get all template items
     const templateItems = await this.getTaskTemplateItems(templateId);
+    console.log(`[Template Application] Found ${templateItems.length} template items to process`);
+    
+    if (templateItems.length === 0) {
+      console.warn(`[Template Application] No items found for template ID ${templateId}`);
+      return [];
+    }
     
     // Create tasks from template items
     const createdTasks: Task[] = [];
     
     for (const item of templateItems) {
-      // Calculate due date based on deal start date and days from start
-      let dueDate: Date | null = null;
-      
-      if (deal.startDate) {
-        const startDate = new Date(deal.startDate);
-        dueDate = new Date(startDate);
-        dueDate.setDate(startDate.getDate() + item.daysFromStart);
+      try {
+        console.log(`[Template Application] Processing template item: "${item.title}", phase: ${item.phase}, category: ${item.category}, days from start: ${item.daysFromStart}`);
+        
+        // Calculate due date based on deal start date and days from start
+        let dueDate: Date | null = null;
+        
+        if (deal.startDate) {
+          const startDate = new Date(deal.startDate);
+          dueDate = new Date(startDate);
+          dueDate.setDate(startDate.getDate() + item.daysFromStart);
+          console.log(`[Template Application] Calculated due date: ${dueDate.toISOString()} (${item.daysFromStart} days from start date ${startDate.toISOString()})`);
+        } else {
+          console.log(`[Template Application] No start date for deal, setting due date to null`);
+        }
+        
+        // Create the task with the calculated due date
+        const taskData: InsertTask = {
+          dealId,
+          title: item.title,
+          description: item.description || null,
+          phase: item.phase,
+          category: item.category,
+          status: schema.TaskStatuses.NOT_STARTED,
+          assignedTo: item.assignedTo || null,
+        };
+        
+        // Only add the dueDate if it's not null
+        if (dueDate) {
+          taskData.dueDate = dueDate.toISOString();
+        }
+        
+        console.log(`[Template Application] Creating task with data:`, JSON.stringify(taskData));
+        const task = await this.createTask(taskData);
+        console.log(`[Template Application] Successfully created task ID ${task.id}: "${task.title}"`);
+        
+        createdTasks.push(task);
+      } catch (error) {
+        console.error(`[Template Application] Error creating task from template item "${item.title}":`, error);
+        // Continue with other items even if one fails
       }
-      
-      // Create the task with the calculated due date
-      const taskData: InsertTask = {
-        dealId,
-        title: item.title,
-        description: item.description || null,
-        phase: item.phase,
-        category: item.category,
-        status: schema.TaskStatuses.NOT_STARTED,
-        assignedTo: item.assignedTo || null,
-      };
-      
-      // Only add the dueDate if it's not null
-      if (dueDate) {
-        taskData.dueDate = dueDate.toISOString();
-      }
-      
-      const task = await this.createTask(taskData);
-      createdTasks.push(task);
     }
     
+    console.log(`[Template Application] Completed template application, created ${createdTasks.length} tasks`);
     return createdTasks;
   }
 }
