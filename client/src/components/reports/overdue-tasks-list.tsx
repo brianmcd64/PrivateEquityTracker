@@ -20,7 +20,8 @@ export function OverdueTasksList({ tasks, users }: OverdueTasksListProps) {
     
     // Get all overdue tasks
     const overdueList = tasks.filter(task => {
-      if (task.status === TaskStatuses.COMPLETED) return false;
+      // Exclude completed, deferred or tasks with no due date
+      if (task.status === TaskStatuses.COMPLETED || task.status === TaskStatuses.DEFERRED) return false;
       if (!task.dueDate) return false;
       return new Date(task.dueDate) < new Date();
     });
@@ -79,11 +80,29 @@ export function OverdueTasksList({ tasks, users }: OverdueTasksListProps) {
               {task.dueDate ? formatDistanceToNow(new Date(task.dueDate), { addSuffix: false }) : "N/A"}
             </TableCell>
             <TableCell>
-              <Link href={`/task/${task.id}`}>
-                <Button variant="ghost" size="sm" title="View Task">
-                  <ArrowUpRight className="h-4 w-4" />
-                </Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Badge 
+                  variant={
+                    task.status === TaskStatuses.IN_PROGRESS ? "default" : 
+                    task.status === TaskStatuses.BLOCKED ? "destructive" : 
+                    "outline"
+                  }
+                  className={
+                    task.status === TaskStatuses.PENDING ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-100" : ""
+                  }
+                >
+                  {task.status === TaskStatuses.IN_PROGRESS ? "In Progress" : 
+                    task.status === TaskStatuses.BLOCKED ? "Blocked" :
+                    task.status === TaskStatuses.PENDING ? "Pending" : 
+                    task.status === TaskStatuses.NOT_STARTED ? "Not Started" : 
+                    task.status}
+                </Badge>
+                <Link href={`/task/${task.id}`}>
+                  <Button variant="ghost" size="sm" title="View Task">
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
             </TableCell>
           </TableRow>
         ))}

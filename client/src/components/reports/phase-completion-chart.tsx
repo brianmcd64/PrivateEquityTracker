@@ -132,6 +132,8 @@ export function PhaseCompletionChart({ tasks }: PhaseCompletionChartProps) {
               inProgress: "In Progress",
               pending: "Pending Review",
               notStarted: "Not Started",
+              blocked: "Blocked",
+              deferred: "Deferred",
               completionRate: "Completion Rate"
             };
             return [name === "completionRate" ? `${value}%` : value, displayNames[name as keyof typeof displayNames] || name];
@@ -142,6 +144,8 @@ export function PhaseCompletionChart({ tasks }: PhaseCompletionChartProps) {
         <Bar yAxisId="left" dataKey="inProgress" stackId="a" name="In Progress" fill={colors.inProgress} />
         <Bar yAxisId="left" dataKey="pending" stackId="a" name="Pending Review" fill={colors.pending} />
         <Bar yAxisId="left" dataKey="notStarted" stackId="a" name="Not Started" fill={colors.notStarted} />
+        <Bar yAxisId="left" dataKey="blocked" stackId="a" name="Blocked" fill={colors.blocked} />
+        <Bar yAxisId="left" dataKey="deferred" stackId="a" name="Deferred" fill={colors.deferred} />
         <Bar yAxisId="right" dataKey="completionRate" name="Completion Rate (%)" fill="#111827">
           {chartData.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={getPhaseColor(entry.phaseId)} />
