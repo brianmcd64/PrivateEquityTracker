@@ -65,49 +65,7 @@ export default function NewDealPage() {
     setSelectedTemplateId(templateId);
   }, []);
   
-  // Apply template to deal - this will be used directly in onSuccess of createDealMutation
-  const applyTemplate = async (dealId: number, templateId: number) => {
-    console.log(`Directly applying template ID ${templateId} to deal ID ${dealId}`);
-    try {
-      const tasksResponse = await apiRequest(
-        "POST", 
-        `/api/deals/${dealId}/apply-template`, 
-        { templateId }
-      );
-      console.log("Template application response:", tasksResponse);
-      
-      if (Array.isArray(tasksResponse) && tasksResponse.length > 0) {
-        toast({
-          title: "Template Applied",
-          description: `${tasksResponse.length} tasks created from template`,
-        });
-      } else {
-        console.error("Template applied but no tasks were returned:", tasksResponse);
-        toast({
-          title: "Warning",
-          description: "Template applied but no tasks were created",
-          variant: "destructive",
-        });
-      }
-      
-      // Invalidate all relevant queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/tasks`] });
-      
-      return tasksResponse;
-    } catch (error) {
-      console.error("Failed to apply template:", error);
-      toast({
-        title: "Error",
-        description: `Failed to apply template: ${error instanceof Error ? error.message : "Unknown error"}`,
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-  
-  // Define deal creation mutation (without template)
+  // Define regular deal creation mutation
   const createDealMutation = useMutation<any, Error, InsertDeal>({
     mutationFn: async (data: InsertDeal) => {
       console.log("Creating new deal with data:", data);
@@ -159,76 +117,6 @@ export default function NewDealPage() {
   });
   
   // Define deal with template mutation
-  const createDealWithTemplateMutation = useMutation<any, Error, InsertDeal & { templateId: number | null }>({
-    mutationFn: async (data: InsertDeal & { templateId: number | null }) => {
-      console.log("Creating deal with template, data:", data);
-      const response = await apiRequest("POST", "/api/deals-with-template", data);
-      console.log("Created deal with template response:", response);
-      return response;
-    },
-    onSuccess: async (createdDeal) => {
-      console.log("Deal with template created successfully:", createdDeal);
-      
-      // Check if we have tasks information from the server
-      const tasksCreated = createdDeal.tasksCreated;
-      const templateApplied = createdDeal.templateApplied;
-      
-      // Store the important info about the created deal in localStorage
-      if (createdDeal && createdDeal.id) {
-        // Update localStorage with the new deal information
-        localStorage.setItem("activeDealId", createdDeal.id.toString());
-        localStorage.setItem("activeDeal", JSON.stringify({
-          id: createdDeal.id,
-          name: createdDeal.name
-        }));
-        
-        // Show appropriate toast based on whether tasks were created
-        if (tasksCreated && templateApplied) {
-          toast({
-            title: "Deal Created with Tasks",
-            description: `Deal "${createdDeal.name}" created with ${tasksCreated} tasks from template "${templateApplied}".`,
-          });
-        } else if (createdDeal.error) {
-          toast({
-            title: "Warning",
-            description: createdDeal.error,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Success",
-            description: "Deal created successfully.",
-          });
-        }
-      } else {
-        toast({
-          title: "Success",
-          description: "Deal created successfully.",
-        });
-      }
-      
-      // Invalidate all queries related to this deal
-      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
-      if (createdDeal && createdDeal.id) {
-        queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}/tasks`] });
-      }
-      
-      // Navigate to deals list after deal creation
-      navigate("/deals");
-    },
-    onError: (error: Error) => {
-      console.error("Failed to create deal:", error);
-      toast({
-        title: "Error",
-        description: `Failed to create deal: ${error.message}`,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Form submission handler
-  // Create deal with template mutation
   const createDealWithTemplateMutation = useMutation<any, Error, InsertDeal & { templateId: number | null }>({
     mutationFn: async (data: InsertDeal & { templateId: number | null }) => {
       console.log("Creating deal with template, data:", data);
@@ -466,9 +354,9 @@ export default function NewDealPage() {
                   </Button>
                   <Button 
                     type="submit" 
-                    disabled={createDealMutation.isPending}
+                    disabled={createDealMutation.isPending || (selectedTemplateId && createDealWithTemplateMutation.isPending)}
                   >
-                    {createDealMutation.isPending 
+                    {(createDealMutation.isPending || (selectedTemplateId && createDealWithTemplateMutation.isPending))
                       ? "Creating..." 
                       : "Create Deal"}
                   </Button>
