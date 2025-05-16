@@ -49,18 +49,28 @@ export function TemplateCsvImport({
       setIsUploading(true);
       console.log("Starting CSV upload for template:", templateName);
       
-      // Simple upload implementation using basic FormData and fetch
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("name", templateName);
-      formData.append("description", templateDesc || "");
-      
       try {
-        console.log("Sending CSV file:", file.name, "size:", file.size);
+        // Read the file contents as text
+        const fileContent = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = (e) => reject(new Error("Error reading file"));
+          reader.readAsText(file);
+        });
         
-        const response = await fetch("/api/task-templates/import", {
+        console.log(`Read CSV content (${fileContent.length} chars)`);
+        
+        // Send the CSV content directly in the request body
+        const response = await fetch("/api/task-templates/import-content", {
           method: "POST",
-          body: formData,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: templateName,
+            description: templateDesc || "",
+            csvContent: fileContent
+          }),
           credentials: "include"
         });
         
@@ -76,6 +86,9 @@ export function TemplateCsvImport({
         }
         
         return await response.json();
+      } catch (error) {
+        console.error("CSV import error:", error);
+        throw error;
       } finally {
         setIsUploading(false);
       }

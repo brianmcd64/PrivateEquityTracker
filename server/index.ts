@@ -20,16 +20,12 @@ if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
 }
 
-// Configure express-fileupload with more robust settings
-app.use(fileUpload({
-  useTempFiles: true,
-  tempFileDir: tempDir,
-  parseNested: false, // Disable parseNested as it can cause issues
-  debug: true,
-  abortOnLimit: true,
-  responseOnLimit: "File size limit exceeded",
+// Use multer instead of express-fileupload
+const multer = require('multer');
+const upload = multer({ 
+  dest: tempDir,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
-}));
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
