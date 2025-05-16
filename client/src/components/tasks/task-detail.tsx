@@ -271,8 +271,18 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
       
       <Card>
         <div className="border-b border-neutral-200 p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            {canEditTask() && !editMode && (
+              <div className="md:order-2">
+                <Button variant="default" size="sm" onClick={() => setEditMode(true)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Edit Task
+                </Button>
+              </div>
+            )}
+            <div className="flex-1 md:order-1">
               {editMode ? (
                 <Input 
                   name="title"
@@ -294,16 +304,8 @@ export function TaskDetail({ taskId, onBack }: TaskDetailProps) {
                 <p className="text-neutral-500 mt-1">{task.description}</p>
               )}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="md:order-3">
               {getStatusBadge(task.status)}
-              {canEditTask() && !editMode && (
-                <Button variant="default" size="sm" onClick={() => setEditMode(true)}>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                  Edit Task
-                </Button>
-              )}
             </div>
           </div>
         </div>
