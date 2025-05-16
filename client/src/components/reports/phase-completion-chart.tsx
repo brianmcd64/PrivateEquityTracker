@@ -46,10 +46,11 @@ export function PhaseCompletionChart({ tasks }: PhaseCompletionChartProps) {
       const blockedCount = phaseTasks.filter(task => task.status === TaskStatuses.BLOCKED).length;
       const deferredCount = phaseTasks.filter(task => task.status === TaskStatuses.DEFERRED).length;
       
-      // Calculate completion percentage
+      // Calculate open tasks (all non-completed tasks)
       const totalTasks = phaseTasks.length;
-      const completionPercentage = totalTasks > 0 
-        ? Math.round((completedCount / totalTasks) * 100) 
+      const openTasks = totalTasks - completedCount;
+      const openPercentage = totalTasks > 0 
+        ? Math.round((openTasks / totalTasks) * 100) 
         : 0;
       
       // Get friendly phase name
@@ -67,14 +68,14 @@ export function PhaseCompletionChart({ tasks }: PhaseCompletionChartProps) {
       return {
         phase: phaseName,
         phaseId: phase,
-        completed: completedCount,
         inProgress: inProgressCount,
         pending: pendingCount,
         notStarted: notStartedCount,
         blocked: blockedCount,
         deferred: deferredCount,
         total: totalTasks,
-        completionRate: completionPercentage
+        openTasks: openTasks,
+        openRate: openPercentage
       };
     });
     
@@ -128,25 +129,23 @@ export function PhaseCompletionChart({ tasks }: PhaseCompletionChartProps) {
         <Tooltip 
           formatter={(value: number, name: string) => {
             const displayNames = {
-              completed: "Completed",
               inProgress: "In Progress",
               pending: "Pending Review",
               notStarted: "Not Started",
               blocked: "Blocked",
               deferred: "Deferred",
-              completionRate: "Completion Rate"
+              openRate: "Open Tasks Rate"
             };
-            return [name === "completionRate" ? `${value}%` : value, displayNames[name as keyof typeof displayNames] || name];
+            return [name === "openRate" ? `${value}%` : value, displayNames[name as keyof typeof displayNames] || name];
           }}
         />
         <Legend />
-        <Bar yAxisId="left" dataKey="completed" stackId="a" name="Completed" fill={colors.completed} />
         <Bar yAxisId="left" dataKey="inProgress" stackId="a" name="In Progress" fill={colors.inProgress} />
         <Bar yAxisId="left" dataKey="pending" stackId="a" name="Pending Review" fill={colors.pending} />
         <Bar yAxisId="left" dataKey="notStarted" stackId="a" name="Not Started" fill={colors.notStarted} />
         <Bar yAxisId="left" dataKey="blocked" stackId="a" name="Blocked" fill={colors.blocked} />
         <Bar yAxisId="left" dataKey="deferred" stackId="a" name="Deferred" fill={colors.deferred} />
-        <Bar yAxisId="right" dataKey="completionRate" name="Completion Rate (%)" fill="#111827">
+        <Bar yAxisId="right" dataKey="openRate" name="Open Tasks Rate (%)" fill="#111827">
           {chartData.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={getPhaseColor(entry.phaseId)} />
           ))}
