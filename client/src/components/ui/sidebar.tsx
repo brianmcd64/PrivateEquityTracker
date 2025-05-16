@@ -49,37 +49,57 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
 
   // Load active deal from localStorage
   useEffect(() => {
-    // First check if there's an activeDeal in localStorage
+    // Check for activeDealId first (this is the primary source of truth)
+    const storedDealId = localStorage.getItem("activeDealId");
+    if (storedDealId) {
+      const dealId = parseInt(storedDealId);
+      setActiveDealId(dealId);
+      
+      // Find the deal in the loaded deals
+      if (deals && deals.length > 0) {
+        const foundDeal = deals.find(d => d.id === dealId);
+        if (foundDeal) {
+          setActiveDeal(foundDeal);
+          // Update stored deal to ensure consistency
+          localStorage.setItem("activeDeal", JSON.stringify({
+            id: foundDeal.id,
+            name: foundDeal.name,
+            status: foundDeal.status
+          }));
+          return;
+        }
+      }
+    }
+    
+    // Fallback to checking activeDeal
     const storedDeal = localStorage.getItem("activeDeal");
     if (storedDeal) {
       try {
         const parsedDeal = JSON.parse(storedDeal);
         setActiveDeal(parsedDeal);
         setActiveDealId(parsedDeal.id);
-        return; // We already have an active deal, don't override it
+        // Make sure activeDealId is also updated
+        localStorage.setItem("activeDealId", parsedDeal.id.toString());
+        return;
       } catch (e) {
         console.error("Failed to parse active deal from localStorage");
       }
     }
     
-    // Fallback to checking activeDealId
-    const storedDealId = localStorage.getItem("activeDealId");
-    if (storedDealId) {
-      setActiveDealId(parseInt(storedDealId));
-    } else if (activeDeals.length > 0) {
+    // If no active deal is set and we have deals, use the first active/open one
+    if (activeDeals.length > 0) {
       // Set first deal as active if nothing is stored
       const firstDeal = activeDeals[0];
       setActiveDealId(firstDeal.id);
+      setActiveDeal(firstDeal);
       localStorage.setItem("activeDealId", firstDeal.id.toString());
-
-      // Also store the full deal object
       localStorage.setItem("activeDeal", JSON.stringify({
         id: firstDeal.id,
         name: firstDeal.name,
         status: firstDeal.status
       }));
     }
-  }, [activeDeals]);
+  }, [activeDeals, deals]);
 
   const menuItems = [
     { path: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-5 w-5 mr-3 text-neutral-500" /> },
@@ -92,7 +112,12 @@ export function Sidebar({ className, isMobile, isOpen, onClose }: SidebarProps) 
   ];
 
   const handleDealClick = (deal: Deal) => {
+    // Update both the active deal object and the active deal ID
     setActiveDeal(deal);
+    setActiveDealId(deal.id);
+    
+    // Update both localStorage values for consistency
+    localStorage.setItem("activeDealId", deal.id.toString());
     localStorage.setItem("activeDeal", JSON.stringify({
       id: deal.id,
       name: deal.name,
