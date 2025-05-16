@@ -435,9 +435,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extract dealId for activity logging before schema validation
       const { dealId, ...requestBody } = req.body;
       
+      // Generate a unique request ID on the server
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const timestamp = now.getTime();
+      const randomId = Math.floor(Math.random() * 10000).toString().padStart(4, "0");
+      const uniqueRequestId = `REQ-${year}${month}-${timestamp}${randomId}`;
+      
       // Validate the request data using the schema
       const requestData = insertRequestSchema.parse({
         ...requestBody,
+        requestId: uniqueRequestId, // Override any client-provided ID
         createdBy: req.user!.id
       });
       
