@@ -236,7 +236,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
-                  <MetricsChart tasks={tasks || []} />
+                  <MetricsChart tasks={tasks || []} dealStartDate={deal?.startDate} />
                 </div>
               </CardContent>
             </Card>

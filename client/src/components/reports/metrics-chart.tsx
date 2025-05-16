@@ -10,24 +10,40 @@ import {
   ResponsiveContainer,
   Legend
 } from "recharts";
-import { eachMonthOfInterval, format, subMonths } from "date-fns";
+import { eachMonthOfInterval, format, subMonths, isAfter, min, max } from "date-fns";
 
 interface MetricsChartProps {
   tasks: Task[];
+  dealStartDate?: string;
 }
 
-export function MetricsChart({ tasks }: MetricsChartProps) {
+export function MetricsChart({ tasks, dealStartDate }: MetricsChartProps) {
   const [chartData, setChartData] = useState<any[]>([]);
   
   useEffect(() => {
     if (!tasks.length) return;
     
-    // Create monthly data points for the last 6 months
+    // Determine the start date for the chart
     const today = new Date();
-    const sixMonthsAgo = subMonths(today, 5); // To get 6 months including current month
+    
+    // If deal start date is provided, use it as the start date
+    // Otherwise fallback to 6 months ago
+    let startDate: Date;
+    
+    if (dealStartDate) {
+      startDate = new Date(dealStartDate);
+      
+      // Ensure start date is not after today
+      if (isAfter(startDate, today)) {
+        startDate = today;
+      }
+    } else {
+      // Default to last 6 months if no deal start date
+      startDate = subMonths(today, 5); // To get 6 months including current month
+    }
     
     const monthRange = eachMonthOfInterval({
-      start: sixMonthsAgo,
+      start: startDate,
       end: today
     });
     
