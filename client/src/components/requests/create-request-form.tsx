@@ -1,0 +1,251 @@
+import { useState } from "react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Task } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+
+// Schema for the request form
+const requestFormSchema = z.object({
+  taskId: z.number(),
+  dealId: z.number(),
+  requestId: z.string().min(3, "Request ID must be at least 3 characters"),
+  requestType: z.string(),
+  details: z.string().min(10, "Details must be at least 10 characters"),
+  status: z.string(),
+  recipient: z.string(),
+  priority: z.coerce.number().int().min(1).max(3),
+  sendDate: z.string().optional(),
+});
+
+type RequestFormValues = z.infer<typeof requestFormSchema>;
+
+interface CreateRequestFormProps {
+  task: Task;
+  onComplete?: () => void;
+}
+
+export function CreateRequestForm({ task, onComplete }: CreateRequestFormProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Generate a unique request ID
+  const generateRequestId = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const randomId = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
+    return `REQ-${year}${month}-${randomId}`;
+  };
+
+  // Create form with default values
+  const form = useForm<RequestFormValues>({
+    resolver: zodResolver(requestFormSchema),
+    defaultValues: {
+      taskId: task.id,
+      dealId: task.dealId,
+      requestId: generateRequestId(),
+      requestType: "information",
+      details: "",
+      status: "pending",
+      recipient: "seller",
+      priority: 2,
+      sendDate: new Date().toISOString(),
+    },
+  });
+  
+  // Create request mutation
+  const createRequestMutation = useMutation({
+    mutationFn: async (data: RequestFormValues) => {
+      return apiRequest("POST", "/api/requests", data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Request created",
+        description: "The request has been successfully created.",
+      });
+      
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: [`/api/tasks/${task.id}/requests`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${task.dealId}/requests`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/deals/${task.dealId}/activity`] });
+      
+      // Close dialog and call onComplete if provided
+      setIsOpen(false);
+      if (onComplete) {
+        onComplete();
+      }
+    },
+    onError: (error) => {
+      console.error("Error creating request:", error);
+      toast({
+        title: "Error creating request",
+        description: error.message || "An error occurred while creating the request.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Handle form submission
+  const onSubmit = (data: RequestFormValues) => {
+    console.log("Submitting request data:", data);
+    createRequestMutation.mutate(data);
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button className="w-full">Create Request</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Create New Request</DialogTitle>
+          <DialogDescription>
+            Create a new information request related to this task.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="requestId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Request ID</FormLabel>
+                  <FormControl>
+                    <Input placeholder="REQ-20230001" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="requestType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Request Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select request type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="information">Information</SelectItem>
+                      <SelectItem value="clarification">Clarification</SelectItem>
+                      <SelectItem value="document">Document</SelectItem>
+                      <SelectItem value="meeting">Meeting</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="details"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Details</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Enter request details..." 
+                      className="min-h-[80px]" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="recipient"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Recipient</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select recipient" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="seller">Seller</SelectItem>
+                      <SelectItem value="management">Management</SelectItem>
+                      <SelectItem value="advisor">Advisor</SelectItem>
+                      <SelectItem value="legal">Legal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="priority"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Priority</FormLabel>
+                  <Select 
+                    onValueChange={(value) => field.onChange(parseInt(value))} 
+                    defaultValue={field.value.toString()}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="1">Low</SelectItem>
+                      <SelectItem value="2">Medium</SelectItem>
+                      <SelectItem value="3">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Hidden fields for taskId, dealId, status */}
+            <input type="hidden" {...form.register("taskId")} />
+            <input type="hidden" {...form.register("dealId")} />
+            <input type="hidden" {...form.register("status")} />
+            
+            <div className="pt-4 flex justify-end space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                disabled={createRequestMutation.isPending}
+              >
+                {createRequestMutation.isPending ? "Creating..." : "Create Request"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
