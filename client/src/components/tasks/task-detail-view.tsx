@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Task, Document, Request } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,29 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { CreateRequestForm } from "@/components/requests/create-request-form";
-// Simple component for requests list 
-function RequestsList({ requests }: { requests: Request[] }) {
-  if (!requests || requests.length === 0) {
-    return <p className="text-center text-gray-500">No requests found.</p>;
-  }
-  
-  return (
-    <div className="space-y-3">
-      {requests.map((req) => (
-        <Card key={req.id} className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-medium">{req.requestId}</h3>
-            <Badge variant="outline">{req.status}</Badge>
-          </div>
-          <p className="text-sm">{req.details}</p>
-          <div className="mt-2 text-xs text-gray-500">
-            Recipient: {req.recipient} | Priority: {req.priority}
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-};
+import { RequestsList } from "@/components/requests/requests-list";
 
 // Simple component for document list
 function DocumentList({ documents }: { documents: Document[] }) {
@@ -62,6 +40,7 @@ interface TaskDetailViewProps {
 
 export function TaskDetailView({ taskId }: TaskDetailViewProps) {
   const [activeTab, setActiveTab] = useState("details");
+  const queryClient = useQueryClient();
 
   // Fetch task data
   const { data: task, isLoading, error } = useQuery<Task>({
@@ -79,6 +58,11 @@ export function TaskDetailView({ taskId }: TaskDetailViewProps) {
     queryKey: [`/api/tasks/${taskId}/requests`],
     enabled: !!taskId,
   });
+  
+  // Function to refresh requests data
+  const refreshRequests = () => {
+    queryClient.invalidateQueries({ queryKey: [`/api/tasks/${taskId}/requests`] });
+  };
 
   if (isLoading) {
     return <div className="text-center p-4">Loading task details...</div>;
@@ -176,7 +160,7 @@ export function TaskDetailView({ taskId }: TaskDetailViewProps) {
         <TabsContent value="requests" className="p-0">
           <CardContent className="pt-6">
             {requests.length > 0 ? (
-              <RequestsList requests={requests} />
+              <RequestsList requests={requests} onUpdateRequest={refreshRequests} />
             ) : (
               <p className="text-center py-4 text-gray-500">No requests created for this task.</p>
             )}
@@ -186,7 +170,7 @@ export function TaskDetailView({ taskId }: TaskDetailViewProps) {
       
       <CardFooter className="flex justify-between pt-6 border-t">
         <Button variant="outline">Edit Task</Button>
-        <CreateRequestForm task={task} />
+        <CreateRequestForm task={task} onComplete={refreshRequests} />
       </CardFooter>
     </Card>
   );
