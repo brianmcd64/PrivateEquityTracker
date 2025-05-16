@@ -24,10 +24,13 @@ export function PhaseCompletionChart({ tasks }: PhaseCompletionChartProps) {
     
     // Define phases in the desired order
     const phaseOrder = [
-      TaskPhases.LOI,
-      TaskPhases.DOCUMENT,
-      TaskPhases.DEEPDIVE,
-      TaskPhases.FINAL
+      TaskPhases.LOI_SIGNING,
+      TaskPhases.PLANNING_INITIAL,
+      TaskPhases.DOCUMENT_REVIEW,
+      TaskPhases.MID_PHASE_REVIEW,
+      TaskPhases.DEEP_DIVES,
+      TaskPhases.FINAL_RISK_REVIEW,
+      TaskPhases.DEAL_CLOSING
     ];
     
     // Create data for each phase
@@ -40,6 +43,8 @@ export function PhaseCompletionChart({ tasks }: PhaseCompletionChartProps) {
       const inProgressCount = phaseTasks.filter(task => task.status === TaskStatuses.IN_PROGRESS).length;
       const pendingCount = phaseTasks.filter(task => task.status === TaskStatuses.PENDING).length;
       const notStartedCount = phaseTasks.filter(task => task.status === TaskStatuses.NOT_STARTED).length;
+      const blockedCount = phaseTasks.filter(task => task.status === TaskStatuses.BLOCKED).length;
+      const deferredCount = phaseTasks.filter(task => task.status === TaskStatuses.DEFERRED).length;
       
       // Calculate completion percentage
       const totalTasks = phaseTasks.length;
@@ -48,13 +53,16 @@ export function PhaseCompletionChart({ tasks }: PhaseCompletionChartProps) {
         : 0;
       
       // Get friendly phase name
-      const phaseName = phase === TaskPhases.LOI 
-        ? "LOI Phase" 
-        : phase === TaskPhases.DOCUMENT 
-          ? "Document Review" 
-          : phase === TaskPhases.DEEPDIVE 
-            ? "Deep Dive" 
-            : "Final Analysis";
+      const phaseName = 
+        phase === TaskPhases.LOI_SIGNING ? "LOI Signing" :
+        phase === TaskPhases.PLANNING_INITIAL ? "Initial Planning" :
+        phase === TaskPhases.DOCUMENT_REVIEW ? "Document Review" :
+        phase === TaskPhases.MID_PHASE_REVIEW ? "Mid-Phase Review" :
+        phase === TaskPhases.DEEP_DIVES ? "Deep Dives" :
+        phase === TaskPhases.FINAL_RISK_REVIEW ? "Final Risk Review" :
+        phase === TaskPhases.DEAL_CLOSING ? "Deal Closing" :
+        phase === TaskPhases.POST_CLOSE ? "Post Close" :
+        "Custom";
       
       return {
         phase: phaseName,
@@ -63,6 +71,8 @@ export function PhaseCompletionChart({ tasks }: PhaseCompletionChartProps) {
         inProgress: inProgressCount,
         pending: pendingCount,
         notStarted: notStartedCount,
+        blocked: blockedCount,
+        deferred: deferredCount,
         total: totalTasks,
         completionRate: completionPercentage
       };
@@ -76,20 +86,30 @@ export function PhaseCompletionChart({ tasks }: PhaseCompletionChartProps) {
     completed: "#10b981", // green
     inProgress: "#3b82f6", // blue
     pending: "#f59e0b", // yellow
-    notStarted: "#64748b" // gray
+    notStarted: "#64748b", // gray
+    blocked: "#ef4444", // red
+    deferred: "#a78bfa" // purple
   };
   
   // Generate phase-specific color
   const getPhaseColor = (phaseId: string) => {
     switch (phaseId) {
-      case TaskPhases.LOI:
+      case TaskPhases.LOI_SIGNING:
         return "#3b82f6"; // blue
-      case TaskPhases.DOCUMENT:
+      case TaskPhases.PLANNING_INITIAL:
+        return "#8b5cf6"; // purple
+      case TaskPhases.DOCUMENT_REVIEW:
         return "#f59e0b"; // yellow
-      case TaskPhases.DEEPDIVE:
+      case TaskPhases.MID_PHASE_REVIEW:
+        return "#ec4899"; // pink
+      case TaskPhases.DEEP_DIVES:
         return "#10b981"; // green
-      case TaskPhases.FINAL:
+      case TaskPhases.FINAL_RISK_REVIEW:
         return "#ef4444"; // red
+      case TaskPhases.DEAL_CLOSING:
+        return "#06b6d4"; // cyan
+      case TaskPhases.POST_CLOSE:
+        return "#84cc16"; // lime
       default:
         return "#64748b"; // gray
     }
