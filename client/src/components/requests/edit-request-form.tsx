@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Request, RequestTypes, RequestStatuses } from "@shared/schema";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { Request, RequestTypes, RequestStatuses, Task } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -50,6 +50,12 @@ export function EditRequestForm({ request, onComplete, trigger }: EditRequestFor
     },
   });
   
+  // Fetch task to get dealId
+  const { data: task } = useQuery<Task>({
+    queryKey: [`/api/tasks/${request.taskId}`],
+    enabled: !!request.taskId,
+  });
+  
   // Update request mutation
   const updateRequestMutation = useMutation({
     mutationFn: async (data: RequestEditValues) => {
@@ -63,8 +69,13 @@ export function EditRequestForm({ request, onComplete, trigger }: EditRequestFor
       
       // Invalidate queries
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${request.taskId}/requests`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/deals/${request.dealId}/requests`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/deals/${request.dealId}/activity`] });
+      
+      // Get the dealId from the task
+      const dealId = task?.dealId;
+      if (dealId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/requests`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/activity`] });
+      }
       
       // Close dialog and call onComplete if provided
       setIsOpen(false);

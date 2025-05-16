@@ -471,22 +471,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/requests/:id", isAuthenticated, async (req, res) => {
     try {
       const requestId = parseInt(req.params.id);
-      const requestData = insertRequestSchema.partial().parse(req.body);
       
-      const updatedRequest = await storage.updateRequest(requestId, requestData);
-      
-      if (!updatedRequest) {
+      // Get the original request first
+      const originalRequest = await storage.getRequest(requestId);
+      if (!originalRequest) {
         return res.status(404).json({ message: "Request not found" });
       }
       
+      // Handle special case when status changes to "answered"
+      let updateData = { ...req.body };
+      
+      if (updateData.status === RequestStatuses.ANSWERED && 
+          originalRequest.status !== RequestStatuses.ANSWERED) {
+        // Set response date automatically when marked as answered
+        updateData.responseDate = new Date();
+      }
+      
+      // Validate the request data using the schema
+      const requestData = insertRequestSchema.partial().parse(updateData);
+      
+      // Update the request
+      const updatedRequest = await storage.updateRequest(requestId, requestData);
+      
+      if (!updatedRequest) {
+        return res.status(404).json({ message: "Request not found or could not be updated" });
+      }
+      
+      // Get action details for logging
+      const actionDetails = updateData.status 
+        ? `Updated request status to ${updateData.status}` 
+        : `Updated request: ${updatedRequest.requestId}`;
+      
       // Log activity
       await storage.createActivityLog({
-        dealId: req.body.dealId, // Need to pass dealId in request body
+        dealId: originalRequest.dealId,
         userId: req.user!.id,
         action: "updated",
         entityType: "request",
         entityId: updatedRequest.id,
-        details: `Updated request: ${updatedRequest.requestId}`
+        details: actionDetails
       });
       
       res.json(updatedRequest);
