@@ -88,7 +88,9 @@ export function RequestsList({ requests, onUpdateRequest }: RequestsListProps) {
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-medium">{request.requestId}</h3>
+                  <h3 className="font-medium">
+                    {request.requestId ? request.requestId : `REQ-${request.id}`}
+                  </h3>
                   <Badge variant="outline">{formatType(request.requestType)}</Badge>
                 </div>
                 <div className="flex gap-2 items-center">
