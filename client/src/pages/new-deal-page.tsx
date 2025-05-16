@@ -107,7 +107,7 @@ export default function NewDealPage() {
     }
   };
   
-  // Define deal creation mutation
+  // Define deal creation mutation (without template)
   const createDealMutation = useMutation<any, Error, InsertDeal>({
     mutationFn: async (data: InsertDeal) => {
       console.log("Creating new deal with data:", data);
@@ -116,7 +116,58 @@ export default function NewDealPage() {
       return response;
     },
     onSuccess: async (createdDeal) => {
-      console.log("Deal created successfully:", createdDeal);
+      console.log("Regular deal created successfully:", createdDeal);
+      
+      // Store the important info about the created deal in localStorage
+      if (createdDeal && createdDeal.id) {
+        // Update localStorage with the new deal information
+        localStorage.setItem("activeDealId", createdDeal.id.toString());
+        localStorage.setItem("activeDeal", JSON.stringify({
+          id: createdDeal.id,
+          name: createdDeal.name
+        }));
+        
+        toast({
+          title: "Success",
+          description: "Deal created successfully.",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Deal created successfully.",
+        });
+      }
+      
+      // Invalidate all queries related to this deal
+      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      if (createdDeal && createdDeal.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}/tasks`] });
+      }
+      
+      // Navigate to deals list after deal creation
+      navigate("/deals");
+    },
+    onError: (error: Error) => {
+      console.error("Failed to create deal:", error);
+      toast({
+        title: "Error",
+        description: `Failed to create deal: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Define deal with template mutation
+  const createDealWithTemplateMutation = useMutation<any, Error, InsertDeal & { templateId: number | null }>({
+    mutationFn: async (data: InsertDeal & { templateId: number | null }) => {
+      console.log("Creating deal with template, data:", data);
+      const response = await apiRequest("POST", "/api/deals-with-template", data);
+      console.log("Created deal with template response:", response);
+      return response;
+    },
+    onSuccess: async (createdDeal) => {
+      console.log("Deal with template created successfully:", createdDeal);
       
       // Check if we have tasks information from the server
       const tasksCreated = createdDeal.tasksCreated;
@@ -136,6 +187,12 @@ export default function NewDealPage() {
           toast({
             title: "Deal Created with Tasks",
             description: `Deal "${createdDeal.name}" created with ${tasksCreated} tasks from template "${templateApplied}".`,
+          });
+        } else if (createdDeal.error) {
+          toast({
+            title: "Warning",
+            description: createdDeal.error,
+            variant: "destructive",
           });
         } else {
           toast({
@@ -171,18 +228,95 @@ export default function NewDealPage() {
   });
 
   // Form submission handler
+  // Create deal with template mutation
+  const createDealWithTemplateMutation = useMutation<any, Error, InsertDeal & { templateId: number | null }>({
+    mutationFn: async (data: InsertDeal & { templateId: number | null }) => {
+      console.log("Creating deal with template, data:", data);
+      const response = await apiRequest("POST", "/api/deals-with-template", data);
+      console.log("Created deal with template response:", response);
+      return response;
+    },
+    onSuccess: async (createdDeal) => {
+      console.log("Deal with template created successfully:", createdDeal);
+      
+      // Check if we have tasks information from the server
+      const tasksCreated = createdDeal.tasksCreated;
+      const templateApplied = createdDeal.templateApplied;
+      
+      // Store the important info about the created deal in localStorage
+      if (createdDeal && createdDeal.id) {
+        // Update localStorage with the new deal information
+        localStorage.setItem("activeDealId", createdDeal.id.toString());
+        localStorage.setItem("activeDeal", JSON.stringify({
+          id: createdDeal.id,
+          name: createdDeal.name
+        }));
+        
+        // Show appropriate toast based on whether tasks were created
+        if (tasksCreated && templateApplied) {
+          toast({
+            title: "Deal Created with Tasks",
+            description: `Deal "${createdDeal.name}" created with ${tasksCreated} tasks from template "${templateApplied}".`,
+          });
+        } else if (createdDeal.error) {
+          toast({
+            title: "Warning",
+            description: createdDeal.error,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Success",
+            description: "Deal created successfully.",
+          });
+        }
+      } else {
+        toast({
+          title: "Success",
+          description: "Deal created successfully.",
+        });
+      }
+      
+      // Invalidate all queries related to this deal
+      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      if (createdDeal && createdDeal.id) {
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${createdDeal.id}/tasks`] });
+      }
+      
+      // Navigate to deals list after deal creation
+      navigate("/deals");
+    },
+    onError: (error: Error) => {
+      console.error("Failed to create deal with template:", error);
+      toast({
+        title: "Error",
+        description: `Failed to create deal: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
   const onSubmit = (data: FormData) => {
     // Convert Date objects to ISO strings for API submission
     const formattedData = {
       ...data,
       startDate: data.startDate ? data.startDate.toISOString() : undefined,
       endDate: data.endDate ? data.endDate.toISOString() : undefined,
-      // Include the template ID directly in the deal creation request
+      // Include the template ID directly in the request
       templateId: selectedTemplateId
     };
     
     console.log("Submitting deal with data:", formattedData);
-    createDealMutation.mutate(formattedData as any);
+    
+    // If a template is selected, use the dedicated endpoint for deals with templates
+    if (selectedTemplateId) {
+      console.log(`Creating deal with template ID ${selectedTemplateId}`);
+      createDealWithTemplateMutation.mutate(formattedData as any);
+    } else {
+      // Otherwise use the regular deal creation endpoint
+      createDealMutation.mutate(formattedData as any);
+    }
   };
 
   return (
