@@ -718,11 +718,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dealId = parseInt(req.params.dealId);
       const { templateId } = req.body;
       
+      console.log(`[Template Application] Applying template ID ${templateId} to deal ID ${dealId}`);
+      
       if (!templateId) {
+        console.log("[Template Application] Error: templateId is required");
         return res.status(400).json({ message: "templateId is required" });
       }
       
+      // Get template details for logging
+      const template = await storage.getTaskTemplate(templateId);
+      if (!template) {
+        console.log(`[Template Application] Error: Template ${templateId} not found`);
+        return res.status(404).json({ message: "Template not found" });
+      }
+      
+      console.log(`[Template Application] Found template: ${template.name}`);
+      
       const tasks = await storage.applyTemplateToProject(templateId, dealId);
+      
+      console.log(`[Template Application] Created ${tasks.length} tasks from template`);
       
       // Log activity
       await storage.createActivityLog({
@@ -731,11 +745,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         action: "applied",
         entityType: "task_template",
         entityId: templateId,
-        details: `Applied task template to deal: Created ${tasks.length} tasks`
+        details: `Applied task template "${template.name}" to deal: Created ${tasks.length} tasks`
       });
       
       res.status(201).json(tasks);
     } catch (error) {
+      console.error("[Template Application] Error:", error);
       if (error instanceof Error) {
         return res.status(400).json({ message: error.message });
       }

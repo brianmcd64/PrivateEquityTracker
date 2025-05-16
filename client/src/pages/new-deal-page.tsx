@@ -67,10 +67,13 @@ export default function NewDealPage() {
   // Apply template to deal
   const applyTemplateMutation = useMutation({
     mutationFn: async ({ dealId, templateId }: { dealId: number, templateId: number }) => {
+      console.log(`Applying template ID ${templateId} to deal ID ${dealId}`);
       const response = await apiRequest("POST", `/api/deals/${dealId}/apply-template`, { templateId });
+      console.log("Template application response:", response);
       return response;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
+      console.log("Template applied successfully:", data);
       toast({
         title: "Template Applied",
         description: `Tasks successfully created for deal #${variables.dealId}`,
@@ -80,6 +83,7 @@ export default function NewDealPage() {
       navigate("/deals");
     },
     onError: (error: Error) => {
+      console.error("Failed to apply template:", error);
       toast({
         title: "Error",
         description: `Failed to apply template: ${error.message}`,
@@ -92,27 +96,43 @@ export default function NewDealPage() {
   // Define deal creation mutation
   const createDealMutation = useMutation<any, Error, InsertDeal>({
     mutationFn: async (data: InsertDeal) => {
+      console.log("Creating new deal with data:", data);
       const response = await apiRequest("POST", "/api/deals", data);
+      console.log("Created deal response:", response);
       return response;
     },
     onSuccess: (createdDeal) => {
+      console.log("Deal created successfully:", createdDeal);
       toast({
         title: "Success",
         description: "Deal created successfully.",
       });
       
+      // Store the important info about the created deal in localStorage
+      if (createdDeal && createdDeal.id) {
+        // Update localStorage with the new deal information
+        localStorage.setItem("activeDealId", createdDeal.id.toString());
+        localStorage.setItem("activeDeal", JSON.stringify({
+          id: createdDeal.id,
+          name: createdDeal.name
+        }));
+      }
+      
       // If a template was selected, apply it to the newly created deal
       if (selectedTemplateId && createdDeal && createdDeal.id) {
+        console.log(`Applying template ID ${selectedTemplateId} to new deal ID ${createdDeal.id}`);
         applyTemplateMutation.mutate({
           dealId: createdDeal.id,
           templateId: selectedTemplateId
         });
       } else {
+        console.log("No template selected or deal creation incomplete");
         queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
         navigate("/deals");
       }
     },
     onError: (error: Error) => {
+      console.error("Failed to create deal:", error);
       toast({
         title: "Error",
         description: `Failed to create deal: ${error.message}`,
