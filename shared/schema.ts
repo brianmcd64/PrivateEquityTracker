@@ -104,7 +104,6 @@ export const insertDocumentSchema = createInsertSchema(documents).pick({
 export const requests = pgTable("requests", {
   id: serial("id").primaryKey(),
   taskId: integer("task_id").notNull(),
-  dealId: integer("deal_id").notNull(),
   requestId: text("request_id").notNull(), // Custom ID like "FR-2023-001"
   requestType: text("request_type").notNull(), // "information", "clarification", "document", "meeting"
   details: text("details").notNull(),
@@ -122,7 +121,6 @@ export const insertRequestSchema = createInsertSchema(requests).extend({
   sendDate: z.date().optional().nullable(),
 }).pick({
   taskId: true,
-  dealId: true,
   requestId: true,
   requestType: true,
   details: true,

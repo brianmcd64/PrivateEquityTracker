@@ -67,14 +67,13 @@ export function EditRequestForm({ request, onComplete, trigger }: EditRequestFor
         description: "The request has been successfully updated.",
       });
       
-      // Invalidate queries
+      // Invalidate queries for task requests
       queryClient.invalidateQueries({ queryKey: [`/api/tasks/${request.taskId}/requests`] });
       
-      // Get the dealId from the task
-      const dealId = task?.dealId;
-      if (dealId) {
-        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/requests`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/deals/${dealId}/activity`] });
+      // Get the dealId from the task to invalidate deal-specific queries
+      if (task?.dealId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${task.dealId}/requests`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/deals/${task.dealId}/activity`] });
       }
       
       // Close dialog and call onComplete if provided

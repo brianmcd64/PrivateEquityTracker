@@ -502,9 +502,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `Updated request status to ${updateData.status}` 
         : `Updated request: ${updatedRequest.requestId}`;
       
+      // Get task to find dealId
+      const task = await storage.getTask(originalRequest.taskId);
+      
       // Log activity
       await storage.createActivityLog({
-        dealId: originalRequest.dealId,
+        dealId: task?.dealId || 0, // Fallback to 0 if task not found, should be handled better in production
         userId: req.user!.id,
         action: "updated",
         entityType: "request",
