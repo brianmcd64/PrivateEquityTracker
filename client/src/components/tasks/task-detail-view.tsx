@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Task, Document, Request, TaskStatuses } from "@shared/schema";
+import { Task, Document, Request, TaskStatuses, TaskPhases, TaskCategories } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -172,27 +172,89 @@ function EditTaskDialog({ task, onComplete }: { task: Task, onComplete: () => vo
               )}
             />
             
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={TaskStatuses.NOT_STARTED}>Not Started</SelectItem>
+                        <SelectItem value={TaskStatuses.IN_PROGRESS}>In Progress</SelectItem>
+                        <SelectItem value={TaskStatuses.COMPLETED}>Completed</SelectItem>
+                        <SelectItem value={TaskStatuses.BLOCKED}>Blocked</SelectItem>
+                        <SelectItem value={TaskStatuses.DEFERRED}>Deferred</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="phase"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phase</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select phase" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={TaskPhases.LOI_SIGNING}>LOI Signing</SelectItem>
+                        <SelectItem value={TaskPhases.PLANNING_INITIAL}>Planning Initial</SelectItem>
+                        <SelectItem value={TaskPhases.DOCUMENT_REVIEW}>Document Review</SelectItem>
+                        <SelectItem value={TaskPhases.MID_PHASE_REVIEW}>Mid Phase Review</SelectItem>
+                        <SelectItem value={TaskPhases.DEEP_DIVES}>Deep Dives</SelectItem>
+                        <SelectItem value={TaskPhases.FINAL_RISK_REVIEW}>Final Risk Review</SelectItem>
+                        <SelectItem value={TaskPhases.DEAL_CLOSING}>Deal Closing</SelectItem>
+                        <SelectItem value={TaskPhases.POST_CLOSE}>Post Close</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             <FormField
               control={form.control}
-              name="status"
+              name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Status</FormLabel>
+                  <FormLabel>Category</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
+                        <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={TaskStatuses.NOT_STARTED}>Not Started</SelectItem>
-                      <SelectItem value={TaskStatuses.IN_PROGRESS}>In Progress</SelectItem>
-                      <SelectItem value={TaskStatuses.COMPLETED}>Completed</SelectItem>
-                      <SelectItem value={TaskStatuses.BLOCKED}>Blocked</SelectItem>
-                      <SelectItem value={TaskStatuses.DEFERRED}>Deferred</SelectItem>
+                      <SelectItem value={TaskCategories.OPERATING_TEAM}>Operating Team</SelectItem>
+                      <SelectItem value={TaskCategories.SELLER_BROKER}>Seller Broker</SelectItem>
+                      <SelectItem value={TaskCategories.IR_BANK}>IR Bank</SelectItem>
+                      <SelectItem value={TaskCategories.LEGAL}>Legal</SelectItem>
+                      <SelectItem value={TaskCategories.FINANCIAL}>Financial</SelectItem>
+                      <SelectItem value={TaskCategories.INVESTMENT_COMMITTEE}>Investment Committee</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
