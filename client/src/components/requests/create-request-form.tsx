@@ -44,8 +44,9 @@ export function CreateRequestForm({ task, onComplete }: CreateRequestFormProps) 
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
+    const timestamp = now.getTime().toString().slice(-6); // Use timestamp for uniqueness
     const randomId = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
-    return `REQ-${year}${month}-${randomId}`;
+    return `REQ-${year}${month}-${timestamp}${randomId.slice(0, 2)}`;
   };
 
   // Create form with default values
